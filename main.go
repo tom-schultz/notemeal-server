@@ -19,5 +19,7 @@ func main() {
 	http.HandleFunc("DELETE /user/{id}", handleUserDELETE)
 	http.HandleFunc("GET /user/{id}", handleUserGET)
 	http.HandleFunc("PUT /user/{id}", handleUserPUT)
+	http.HandleFunc("PUT /user/{id}/token-code", handleUserTokenCodePUT)
+	http.HandleFunc("POST /user/{id}/token", handleUserTokenPOST)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

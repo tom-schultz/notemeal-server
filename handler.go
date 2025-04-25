@@ -23,6 +23,7 @@ type BaseHandler struct {
 	RequestBody []byte
 	Writer      http.ResponseWriter
 	ObjId       string
+	principalId string
 }
 
 func (handler *BaseHandler) endRequest(success bool) {
@@ -31,6 +32,54 @@ func (handler *BaseHandler) endRequest(success bool) {
 	} else {
 		fmt.Printf("%s %s : failure\n", handler.Request.Method, handler.Request.URL)
 	}
+}
+
+func (handler *BaseHandler) getAuth() bool {
+	var ok bool
+	var tokenString string
+	handler.principalId, tokenString, ok = handler.Request.BasicAuth()
+
+	if !ok {
+		fmt.Println("Failed to find auth!")
+		handler.Writer.WriteHeader(http.StatusUnauthorized)
+		return false
+	}
+
+	user, err := (*handler.Db).GetUser(handler.principalId)
+
+	if err != nil {
+		fmt.Println(err)
+		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		return false
+	}
+
+	if user == nil {
+		fmt.Println("Failed to find auth user in database!")
+		handler.Writer.WriteHeader(http.StatusUnauthorized)
+		return false
+	}
+
+	token, err := (*handler.Db).GetToken(tokenString)
+
+	if err != nil {
+		fmt.Println(err)
+		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		return false
+	}
+
+	if token == nil {
+		fmt.Println("Failed to find auth token in database!")
+		handler.Writer.WriteHeader(http.StatusUnauthorized)
+		return false
+	}
+
+	if token.UserId != handler.principalId {
+		fmt.Println("Token does not belong to user!")
+		handler.Writer.WriteHeader(http.StatusUnauthorized)
+		return false
+	}
+
+	return true
 }
 
 func (handler *BaseHandler) getBodyString() bool {

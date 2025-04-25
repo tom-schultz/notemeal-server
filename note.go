@@ -8,15 +8,34 @@ import (
 
 type Note struct {
 	Id           string
-	Title        string
-	Text         string
 	LastModified int
+	Text         string
+	Title        string
+	UserId       string
 }
 
 type NoteHandler struct {
 	BaseHandler
 	Note     *Note
 	NoteList map[string]int
+}
+
+func (handler *NoteHandler) authorizePrincipal() bool {
+	isOwner, err := (*handler.Db).IsNoteOwner(handler.ObjId, handler.principalId)
+
+	if err != nil {
+		fmt.Println(err)
+		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		return false
+	}
+
+	if !isOwner {
+		fmt.Println("Principal is not authorized!")
+		handler.Writer.WriteHeader(http.StatusUnauthorized)
+		return false
+	}
+
+	return true
 }
 
 func (handler *NoteHandler) deleteNote() bool {
@@ -65,18 +84,30 @@ func (handler *NoteHandler) getNoteFromDb() bool {
 }
 
 func handleNoteDELETE(writer http.ResponseWriter, request *http.Request) {
-	handler := startNoteRequest(writer, request, &db)
+	handler, authenticated := startNoteRequest(writer, request, &db)
+
+	if !authenticated {
+		handler.endRequest(false)
+		return
+	}
 
 	result := handler.getObjId() &&
+		handler.authorizePrincipal() &&
 		handler.deleteNote()
 
 	handler.endRequest(result)
 }
 
 func handleNoteGET(writer http.ResponseWriter, request *http.Request) {
-	handler := startNoteRequest(writer, request, &db)
+	handler, authenticated := startNoteRequest(writer, request, &db)
+
+	if !authenticated {
+		handler.endRequest(false)
+		return
+	}
 
 	result := handler.getObjId() &&
+		handler.authorizePrincipal() &&
 		handler.getNoteFromDb() &&
 		handler.writeValueToResponse(handler.Note)
 
@@ -84,28 +115,40 @@ func handleNoteGET(writer http.ResponseWriter, request *http.Request) {
 }
 
 func handleNotePUT(writer http.ResponseWriter, request *http.Request) {
-	handler := startNoteRequest(writer, request, &db)
+	handler, authenticated := startNoteRequest(writer, request, &db)
+
+	if !authenticated {
+		handler.endRequest(false)
+		return
+	}
 
 	result := handler.getObjId() &&
+		handler.authorizePrincipal() &&
 		handler.getBodyString() &&
 		handler.getNoteFromBody() &&
-		handler.writeNoteToDb()
+		handler.updateNoteInDb()
 
 	handler.endRequest(result)
+
 }
 
 func handleNotesGET(writer http.ResponseWriter, request *http.Request) {
-	handler := startNoteRequest(writer, request, &db)
+	handler, authenticated := startNoteRequest(writer, request, &db)
 
-	result := handler.listNotesFromDb() &&
+	if !authenticated {
+		handler.endRequest(false)
+		return
+	}
+
+	result := handler.listNotesFromDb(handler.principalId) &&
 		handler.writeValueToResponse(handler.NoteList)
 
 	handler.endRequest(result)
 }
 
-func (handler *NoteHandler) listNotesFromDb() bool {
+func (handler *NoteHandler) listNotesFromDb(userId string) bool {
 	var err error
-	handler.NoteList, err = (*handler.Db).ListLastModified()
+	handler.NoteList, err = (*handler.Db).ListLastModified(userId)
 
 	if err != nil {
 		fmt.Println(err)
@@ -116,26 +159,27 @@ func (handler *NoteHandler) listNotesFromDb() bool {
 	return true
 }
 
-func startNoteRequest(writer http.ResponseWriter, request *http.Request, db *NotemealDb) *NoteHandler {
+func startNoteRequest(writer http.ResponseWriter, request *http.Request, db *NotemealDb) (*NoteHandler, bool) {
 	fmt.Printf("%s %s : start\n", request.Method, request.URL)
-
-	return &NoteHandler{
+	handler := &NoteHandler{
 		BaseHandler: BaseHandler{
 			Db:      db,
 			Request: request,
 			Writer:  writer,
 		},
 	}
+	authenticated := handler.getAuth()
+	return handler, authenticated
 }
 
-func (handler *NoteHandler) writeNoteToDb() bool {
+func (handler *NoteHandler) updateNoteInDb() bool {
 	if handler.ObjId != handler.Note.Id {
 		fmt.Println("Path objId does not match body objId!")
 		handler.Writer.WriteHeader(http.StatusBadRequest)
 		return false
 	}
 
-	err := (*handler.Db).SetNote(handler.Note)
+	err := (*handler.Db).UpdateNote(handler.Note)
 
 	if err != nil {
 		fmt.Println(err)

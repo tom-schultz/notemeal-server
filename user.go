@@ -6,14 +6,43 @@ import (
 	"net/http"
 )
 
+const TokenCodeKey string = "token-code"
+
 type User struct {
-	Id          string
-	ContactInfo string
+	Id    string
+	Email string
 }
 
 type UserHandler struct {
 	BaseHandler
-	User *User
+	User            *User
+	TokenCodeString string
+	TokenString     string
+}
+
+func (handler *UserHandler) createToken() bool {
+	var err error
+	handler.TokenString, err = (*handler.Db).CreateToken(handler.ObjId, handler.TokenCodeString)
+
+	if err != nil {
+		fmt.Println(err)
+		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		return false
+	}
+
+	return true
+}
+
+func (handler *UserHandler) createTokenCode() bool {
+	err := (*handler.Db).CreateOrUpdateTokenCode(handler.ObjId)
+
+	if err != nil {
+		fmt.Println(err)
+		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		return false
+	}
+
+	return true
 }
 
 func (handler *UserHandler) deleteUser() bool {
@@ -25,6 +54,21 @@ func (handler *UserHandler) deleteUser() bool {
 		return false
 	}
 
+	return true
+}
+
+func (handler *UserHandler) getTokenCodeFromBody() bool {
+	data := map[string]string{}
+	err := json.Unmarshal(handler.RequestBody, &data)
+
+	if err != nil {
+		fmt.Println(err)
+		fmt.Printf("Could not deserialize token code from body string!\n")
+		handler.Writer.WriteHeader(http.StatusBadRequest)
+		return false
+	}
+
+	handler.TokenCodeString = data[TokenCodeKey]
 	return true
 }
 
@@ -52,7 +96,7 @@ func (handler *UserHandler) getUserFromBody() bool {
 
 	if err != nil {
 		fmt.Println(err)
-		fmt.Printf("Could not deserialize note from body string!\n")
+		fmt.Printf("Could not deserialize user from body string!\n")
 		handler.Writer.WriteHeader(http.StatusBadRequest)
 		return false
 	}
@@ -88,6 +132,26 @@ func handleUserPUT(writer http.ResponseWriter, request *http.Request) {
 		handler.getUserFromBody() &&
 		handler.writeUserToDb()
 
+	handler.endRequest(result)
+}
+
+func handleUserTokenCodePUT(writer http.ResponseWriter, request *http.Request) {
+	handler := startUserRequest(writer, request, &db)
+
+	result := handler.getObjId() &&
+		handler.createTokenCode()
+
+	handler.endRequest(result)
+}
+
+func handleUserTokenPOST(writer http.ResponseWriter, request *http.Request) {
+	handler := startUserRequest(writer, request, &db)
+
+	result := handler.getObjId() &&
+		handler.getBodyString() &&
+		handler.getTokenCodeFromBody() &&
+		handler.createToken() &&
+		handler.writeValueToResponse(handler.TokenString)
 	handler.endRequest(result)
 }
 
