@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 )
+
+const ObjIdKey string = "id"
 
 type HandlerError struct {
 	msg string
@@ -16,10 +19,10 @@ func (e HandlerError) Error() string {
 
 type BaseHandler struct {
 	Db          *NotemealDb
-	PathValues  map[string]string
 	Request     *http.Request
 	RequestBody []byte
 	Writer      http.ResponseWriter
+	ObjId       string
 }
 
 func (handler *BaseHandler) endRequest(success bool) {
@@ -44,10 +47,10 @@ func (handler *BaseHandler) getBodyString() bool {
 	return true
 }
 
-func (handler *BaseHandler) getPathValue(key string) bool {
-	handler.PathValues[key] = handler.Request.PathValue(key)
+func (handler *BaseHandler) getObjId() bool {
+	handler.ObjId = handler.Request.PathValue(ObjIdKey)
 
-	if handler.PathValues[key] == "" {
+	if handler.ObjId == "" {
 		err := HandlerError{"Could not get nodeId from path!"}
 		fmt.Println(err)
 		handler.Writer.WriteHeader(http.StatusBadRequest)
@@ -57,15 +60,23 @@ func (handler *BaseHandler) getPathValue(key string) bool {
 	return true
 }
 
-func startRequest(writer http.ResponseWriter, request *http.Request, db *NotemealDb) *NoteHandler {
-	fmt.Printf("%s %s : start\n", request.Method, request.URL)
+func (handler *BaseHandler) writeValueToResponse(value any) bool {
+	body, err := json.Marshal(value)
 
-	return &NoteHandler{
-		BaseHandler: BaseHandler{
-			Db:         db,
-			PathValues: make(map[string]string),
-			Request:    request,
-			Writer:     writer,
-		},
+	if err != nil {
+		fmt.Println(err)
+		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		return false
 	}
+
+	handler.Writer.Header().Add("Content-Type", "application/json")
+	_, err = handler.Writer.Write(body)
+
+	if err != nil {
+		fmt.Println(err)
+		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		return false
+	}
+
+	return true
 }

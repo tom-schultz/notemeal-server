@@ -6,7 +6,9 @@ import (
 
 type NotemealDb interface {
 	DeleteNote(id string) error
+	DeleteUser(id string) error
 	GetNote(id string) (*Note, error)
+	GetUser(id string) (*User, error)
 	Initialize() error
 	ListLastModified() (map[string]int, error)
 	SetNote(n *Note) error
@@ -27,6 +29,15 @@ type NotemealDictDb struct {
 	_users       map[string]*User
 }
 
+func (db *NotemealDictDb) DeleteUser(id string) error {
+	if !db._initialized {
+		return DbError{"Database not initialized!"}
+	}
+
+	delete(db._users, id)
+	return nil
+}
+
 func (db *NotemealDictDb) DeleteNote(id string) error {
 	if !db._initialized {
 		return DbError{"Database not initialized!"}
@@ -44,11 +55,25 @@ func (db *NotemealDictDb) GetNote(id string) (*Note, error) {
 	return db._notes[id], nil
 }
 
+func (db *NotemealDictDb) GetUser(id string) (*User, error) {
+	if !db._initialized {
+		return nil, DbError{"Database not initialized!"}
+	}
+
+	return db._users[id], nil
+}
+
 func (db *NotemealDictDb) Initialize() error {
 	db._notes = map[string]*Note{
 		"doggos":  {"doggos", "Doggos", "doggos are sweet", 0},
 		"cattos":  {"cattos", "Cattos", "meowow", 0},
 		"rabbits": {"rabbits", "Rabbits", "hoppity hop, mothafucka", 0},
+	}
+
+	db._users = map[string]*User{
+		"tom":   {"tom", "fake@fake.com"},
+		"mot":   {"mot", "ekaf@fake.com"},
+		"admin": {"admin", "fakeadmin@fake.com"},
 	}
 
 	db._initialized = true
@@ -83,6 +108,11 @@ func (db *NotemealDictDb) SetUser(u *User) error {
 		return DbError{"Database not initialized!"}
 	}
 
-	db._users[u.Id] = u
+	if user, ok := db._users[u.Id]; ok {
+		user.ContactInfo = u.ContactInfo
+	} else {
+		db._users[u.Id] = u
+	}
+
 	return nil
 }
