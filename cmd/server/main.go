@@ -9,15 +9,21 @@ import (
 
 func main() {
 	database.DictDb()
+	mux := ServeMux()
+	log.Fatal(http.ListenAndServe(":8080", mux))
+}
 
-	http.HandleFunc("DELETE /note/{id}", handler.DeleteNote)
-	http.HandleFunc("GET /note/{id}", handler.GetNote)
-	http.HandleFunc("PUT /note/{id}", handler.PutNote)
-	http.HandleFunc("GET /notes", handler.GetNotes)
-	http.HandleFunc("DELETE /user/{id}", handler.DeleteUser)
-	http.HandleFunc("GET /user/{id}", handler.GetUser)
-	http.HandleFunc("PUT /user/{id}", handler.PutUser)
-	http.HandleFunc("PUT /user/{id}/code", handler.PutCode)
-	http.HandleFunc("POST /user/{id}/token", handler.PostToken)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+func ServeMux() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("DELETE /note/{id}", handler.DeleteNote)
+	mux.HandleFunc("GET /note/{id}", handler.GetNote)
+	mux.HandleFunc("PUT /note/{id}", handler.PutNote)
+	mux.HandleFunc("GET /notes", handler.GetNotes)
+	mux.HandleFunc("DELETE /user/{id}", handler.DeleteUser)
+	mux.HandleFunc("GET /user/{id}", handler.GetUser)
+	mux.HandleFunc("PUT /user/{id}", handler.PutUser)
+	mux.HandleFunc("PUT /user/{id}/code", handler.PutCode)
+	mux.HandleFunc("POST /user/{id}/token", handler.PostToken)
+
+	return mux
 }

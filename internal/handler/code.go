@@ -21,7 +21,7 @@ func PutCode(writer http.ResponseWriter, request *http.Request) {
 }
 
 func (handler *codeHandler) createTokenCode() bool {
-	err := (*handler.Db).CreateOrUpdateCode(handler.ObjId)
+	_, err := (*handler.Db).CreateOrUpdateCode(handler.ObjId)
 
 	if err != nil {
 		fmt.Println(err)

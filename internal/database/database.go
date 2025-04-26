@@ -7,7 +7,7 @@ import (
 var Db Database
 
 type Database interface {
-	CreateOrUpdateCode(id string) error
+	CreateOrUpdateCode(id string) (string, error)
 	CreateToken(userId string, CodeString string) (string, error)
 	DeleteNote(id string) error
 	DeleteUser(id string) error

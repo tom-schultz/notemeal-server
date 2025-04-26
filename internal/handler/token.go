@@ -4,10 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"notemeal-server/internal"
 	"notemeal-server/internal/database"
 )
-
-const codeJsonKey string = "token-code"
 
 type tokenHandler struct {
 	baseHandler
@@ -36,6 +35,11 @@ func (handler *tokenHandler) createToken() bool {
 		return false
 	}
 
+	if handler.token == "" {
+		fmt.Println("Invalid code!")
+		handler.Writer.WriteHeader(http.StatusUnauthorized)
+	}
+
 	return true
 }
 
@@ -50,7 +54,7 @@ func (handler *tokenHandler) getTokenCodeFromBody() bool {
 		return false
 	}
 
-	handler.code = data[codeJsonKey]
+	handler.code = data[internal.CodeJsonKey]
 	return true
 }
 
