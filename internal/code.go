@@ -1,8 +1,8 @@
-package main
+package internal
 
 import "time"
 
-type TokenCode struct {
+type Code struct {
 	UserId     string
 	CodeHash   string
 	Expiration time.Time

@@ -1,32 +1,25 @@
-package main
+package handler
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"notemeal-server/internal/database"
 )
 
-const ObjIdKey string = "id"
+const objIdKey string = "id"
 
-type HandlerError struct {
-	msg string
-}
-
-func (e HandlerError) Error() string {
-	return e.msg
-}
-
-type BaseHandler struct {
-	Db          *NotemealDb
+type baseHandler struct {
+	Db          *database.Database
 	Request     *http.Request
 	RequestBody []byte
 	Writer      http.ResponseWriter
 	ObjId       string
-	principalId string
+	PrincipalId string
 }
 
-func (handler *BaseHandler) endRequest(success bool) {
+func (handler *baseHandler) endRequest(success bool) {
 	if success {
 		fmt.Printf("%s %s : success\n", handler.Request.Method, handler.Request.URL)
 	} else {
@@ -34,10 +27,10 @@ func (handler *BaseHandler) endRequest(success bool) {
 	}
 }
 
-func (handler *BaseHandler) getAuth() bool {
+func (handler *baseHandler) getAuth() bool {
 	var ok bool
 	var tokenString string
-	handler.principalId, tokenString, ok = handler.Request.BasicAuth()
+	handler.PrincipalId, tokenString, ok = handler.Request.BasicAuth()
 
 	if !ok {
 		fmt.Println("Failed to find auth!")
@@ -45,7 +38,7 @@ func (handler *BaseHandler) getAuth() bool {
 		return false
 	}
 
-	user, err := (*handler.Db).GetUser(handler.principalId)
+	user, err := (*handler.Db).GetUser(handler.PrincipalId)
 
 	if err != nil {
 		fmt.Println(err)
@@ -73,7 +66,7 @@ func (handler *BaseHandler) getAuth() bool {
 		return false
 	}
 
-	if token.UserId != handler.principalId {
+	if token.UserId != handler.PrincipalId {
 		fmt.Println("Token does not belong to user!")
 		handler.Writer.WriteHeader(http.StatusUnauthorized)
 		return false
@@ -82,7 +75,7 @@ func (handler *BaseHandler) getAuth() bool {
 	return true
 }
 
-func (handler *BaseHandler) getBodyString() bool {
+func (handler *baseHandler) getBodyString() bool {
 	var err error
 	handler.RequestBody, err = io.ReadAll(handler.Request.Body)
 
@@ -96,11 +89,11 @@ func (handler *BaseHandler) getBodyString() bool {
 	return true
 }
 
-func (handler *BaseHandler) getObjId() bool {
-	handler.ObjId = handler.Request.PathValue(ObjIdKey)
+func (handler *baseHandler) getObjId() bool {
+	handler.ObjId = handler.Request.PathValue(objIdKey)
 
 	if handler.ObjId == "" {
-		err := HandlerError{"Could not get nodeId from path!"}
+		err := Error{"Could not get nodeId from path!"}
 		fmt.Println(err)
 		handler.Writer.WriteHeader(http.StatusBadRequest)
 		return false
@@ -109,7 +102,7 @@ func (handler *BaseHandler) getObjId() bool {
 	return true
 }
 
-func (handler *BaseHandler) writeValueToResponse(value any) bool {
+func (handler *baseHandler) writeValueToResponse(value any) bool {
 	body, err := json.Marshal(value)
 
 	if err != nil {
