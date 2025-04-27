@@ -6,8 +6,14 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/http/httptest"
 	"notemeal-server/internal/database"
+	"notemeal-server/internal/handler"
 )
+
+type Comparer[T any] interface {
+	Compare(T) int
+}
 
 func ExpectBody(resp *http.Response, body []byte) {
 	respBody, err := io.ReadAll(resp.Body)
@@ -21,9 +27,41 @@ func ExpectBody(resp *http.Response, body []byte) {
 	}
 }
 
+func ExpectEqual[T comparable](lhs T, rhs T) {
+	if lhs != rhs {
+		log.Fatal("Expected equal!")
+	}
+}
+
+func ExpectNotEqual[T comparable](lhs T, rhs T) {
+	if lhs == rhs {
+		log.Fatal("Expected not equal!")
+	}
+}
+
+func ExpectCompareGreater[T Comparer[T]](lhs T, rhs T) {
+	if lhs.Compare(rhs) <= 0 {
+		log.Fatal("Expected not equal!")
+	}
+}
+
 func ExpectStatusCode(resp *http.Response, code int) {
 	if resp.StatusCode != code {
-		log.Fatalf("Expected %d, got %d!", resp.StatusCode, code)
+		log.Fatalf("Expected %d, got %d!", code, resp.StatusCode)
+	}
+}
+
+func GetBodyData[T any](resp *http.Response, respData *T) {
+	respBody, err := io.ReadAll(resp.Body)
+
+	if err != nil {
+		log.Fatal("Could not read response body!")
+	}
+
+	err = json.Unmarshal(respBody, respData)
+
+	if err != nil {
+		log.Fatal("Could not deserialize response body!")
 	}
 }
 
@@ -74,11 +112,17 @@ func Serialize(v any) []byte {
 	return data
 }
 
-func UnauthorizedTest(method string, url string, body []byte) {
-	req := NewReq("GET", url, body)
-	resp := SendReq(req)
+func Server() *httptest.Server {
+	database.DictDb()
 
-	if resp.StatusCode != http.StatusUnauthorized {
-		log.Fatal("Unauthorized request didn't give 401!")
-	}
+	mux := handler.ServeMux()
+	ts := httptest.NewServer(mux)
+
+	return ts
+}
+
+func UnauthorizedTest(method string, url string, body []byte) {
+	req := NewReq(method, url, body)
+	resp := SendReq(req)
+	ExpectStatusCode(resp, http.StatusUnauthorized)
 }

@@ -14,18 +14,30 @@ type userHandler struct {
 }
 
 func DeleteUser(writer http.ResponseWriter, request *http.Request) {
-	handler := startUserRequest(writer, request, &database.Db)
+	handler, authenticated := startUserRequest(writer, request, &database.Db)
+
+	if !authenticated {
+		handler.endRequest(false)
+		return
+	}
 
 	result := handler.getObjId() &&
+		handler.authorizePrincipal() &&
 		handler.deleteUser()
 
 	handler.endRequest(result)
 }
 
 func GetUser(writer http.ResponseWriter, request *http.Request) {
-	handler := startUserRequest(writer, request, &database.Db)
+	handler, authenticated := startUserRequest(writer, request, &database.Db)
+
+	if !authenticated {
+		handler.endRequest(false)
+		return
+	}
 
 	result := handler.getObjId() &&
+		handler.authorizePrincipal() &&
 		handler.getUserFromDb() &&
 		handler.writeValueToResponse(handler.user)
 
@@ -33,14 +45,31 @@ func GetUser(writer http.ResponseWriter, request *http.Request) {
 }
 
 func PutUser(writer http.ResponseWriter, request *http.Request) {
-	handler := startUserRequest(writer, request, &database.Db)
+	handler, authenticated := startUserRequest(writer, request, &database.Db)
+
+	if !authenticated {
+		handler.endRequest(false)
+		return
+	}
 
 	result := handler.getObjId() &&
+		handler.authorizePrincipal() &&
 		handler.getBodyString() &&
 		handler.getUserFromBody() &&
 		handler.writeUserToDb()
 
 	handler.endRequest(result)
+}
+
+func (handler *userHandler) authorizePrincipal() bool {
+	authorized := handler.PrincipalId == handler.ObjId
+
+	if !authorized {
+		fmt.Printf("%s is not authorized for operations on %s!\n", handler.PrincipalId, handler.ObjId)
+		handler.Writer.WriteHeader(http.StatusUnauthorized)
+	}
+
+	return authorized
 }
 
 func (handler *userHandler) deleteUser() bool {
@@ -88,16 +117,19 @@ func (handler *userHandler) getUserFromBody() bool {
 	return true
 }
 
-func startUserRequest(writer http.ResponseWriter, request *http.Request, db *database.Database) *userHandler {
+func startUserRequest(writer http.ResponseWriter, request *http.Request, db *database.Database) (*userHandler, bool) {
 	fmt.Printf("%s %s : start\n", request.Method, request.URL)
 
-	return &userHandler{
+	handler := &userHandler{
 		baseHandler: baseHandler{
 			Db:      db,
 			Request: request,
 			Writer:  writer,
 		},
 	}
+
+	authenticated := handler.getAuth()
+	return handler, authenticated
 }
 
 func (handler *userHandler) writeUserToDb() bool {

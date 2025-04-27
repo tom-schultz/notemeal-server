@@ -11,6 +11,7 @@ type Database interface {
 	CreateToken(userId string, CodeString string) (string, error)
 	DeleteNote(id string) error
 	DeleteUser(id string) error
+	GetCode(userId string) (*internal.Code, error)
 	GetNote(id string) (*internal.Note, error)
 	GetToken(token string) (*internal.Token, error)
 	GetUser(id string) (*internal.User, error)
@@ -19,4 +20,12 @@ type Database interface {
 	ListLastModified(userId string) (map[string]int, error)
 	UpdateNote(n *internal.Note) error
 	SetUser(u *internal.User) error
+}
+
+func CompareHashedString(str string, hashedStr string) bool {
+	return str == hashedStr
+}
+
+func HashString(str string) string {
+	return "!!" + str
 }

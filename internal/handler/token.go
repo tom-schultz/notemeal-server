@@ -19,9 +19,9 @@ func PostToken(writer http.ResponseWriter, request *http.Request) {
 
 	result := handler.getObjId() &&
 		handler.getBodyString() &&
-		handler.getTokenCodeFromBody() &&
+		handler.getCodeFromBody() &&
 		handler.createToken() &&
-		handler.writeValueToResponse(handler.token)
+		handler.writeTokenToResponse()
 	handler.endRequest(result)
 }
 
@@ -43,7 +43,7 @@ func (handler *tokenHandler) createToken() bool {
 	return true
 }
 
-func (handler *tokenHandler) getTokenCodeFromBody() bool {
+func (handler *tokenHandler) getCodeFromBody() bool {
 	data := map[string]string{}
 	err := json.Unmarshal(handler.RequestBody, &data)
 
@@ -68,4 +68,9 @@ func startTokenRequest(writer http.ResponseWriter, request *http.Request, db *da
 			Writer:  writer,
 		},
 	}
+}
+
+func (handler *tokenHandler) writeTokenToResponse() bool {
+	data := map[string]string{internal.TokenJsonKey: handler.token}
+	return handler.writeValueToResponse(data)
 }

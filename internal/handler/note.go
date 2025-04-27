@@ -155,6 +155,7 @@ func (handler *noteHandler) listNotesFromDb(userId string) bool {
 
 func startNoteRequest(writer http.ResponseWriter, request *http.Request, db *database.Database) (*noteHandler, bool) {
 	fmt.Printf("%s %s : start\n", request.Method, request.URL)
+
 	handler := &noteHandler{
 		baseHandler: baseHandler{
 			Db:      db,
@@ -162,6 +163,7 @@ func startNoteRequest(writer http.ResponseWriter, request *http.Request, db *dat
 			Writer:  writer,
 		},
 	}
+
 	authenticated := handler.getAuth()
 	return handler, authenticated
 }

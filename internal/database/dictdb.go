@@ -23,7 +23,7 @@ func DictDb() {
 	}
 }
 
-func (db *dictDb) CreateOrUpdateCode(id string) (string, error) {
+func (db *dictDb) CreateOrUpdateCode(userId string) (string, error) {
 	if !db.initialized {
 		return "", DbError{"Database not initialized!"}
 	}
@@ -32,11 +32,11 @@ func (db *dictDb) CreateOrUpdateCode(id string) (string, error) {
 	code := "blue cat dog"
 	codeHash := HashString(code)
 
-	if code, ok := db.codes[id]; ok {
+	if code, ok := db.codes[userId]; ok {
 		code.Expiration = expiration
 	} else {
-		db.codes[id] = &internal.Code{
-			UserId:     id,
+		db.codes[userId] = &internal.Code{
+			UserId:     userId,
 			CodeHash:   codeHash,
 			Expiration: expiration,
 		}
@@ -70,14 +70,6 @@ func (db *dictDb) CreateToken(userId string, CodeString string) (string, error) 
 	return token, nil
 }
 
-func CompareHashedString(str string, hashedStr string) bool {
-	return str == hashedStr
-}
-
-func HashString(str string) string {
-	return "!!" + str
-}
-
 func (db *dictDb) DeleteUser(id string) error {
 	if !db.initialized {
 		return DbError{"Database not initialized!"}
@@ -94,6 +86,14 @@ func (db *dictDb) DeleteNote(id string) error {
 
 	delete(db.notes, id)
 	return nil
+}
+
+func (db *dictDb) GetCode(userId string) (*internal.Code, error) {
+	if !db.initialized {
+		return nil, DbError{"Database not initialized!"}
+	}
+
+	return db.codes[userId], nil
 }
 
 func (db *dictDb) GetNote(id string) (*internal.Note, error) {
@@ -140,12 +140,16 @@ func (db *dictDb) Initialize() error {
 	}
 
 	db.users = map[string]*internal.User{
-		"tom":   {Id: "tom", Email: "fake@fake.com"},
-		"mot":   {Id: "mot", Email: "ekaf@fake.com"},
-		"admin": {Id: "admin", Email: "fakeadmin@fake.com"},
+		"tom":          {Id: "tom", Email: "fake@fake.com"},
+		"mot":          {Id: "mot", Email: "ekaf@fake.com"},
+		"expired-code": {Id: "expired-code", Email: "expired@fake.com"},
+		"admin":        {Id: "admin", Email: "fakeadmin@fake.com"},
 	}
 
-	db.codes = map[string]*internal.Code{}
+	db.codes = map[string]*internal.Code{
+		"expired": {"expired-code", "!!expired", time.Unix(0, 0)},
+	}
+
 	db.tokens = map[string]*internal.Token{}
 
 	db.initialized = true
