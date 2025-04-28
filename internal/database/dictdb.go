@@ -4,11 +4,13 @@ import (
 	"log"
 	"maps"
 	"notemeal-server/internal"
+	"slices"
 	"time"
 )
 
 type dictDb struct {
 	initialized bool
+	admins      []string
 	notes       map[string]*internal.Note
 	tokens      map[string]*internal.Token
 	codes       map[string]*internal.Code
@@ -121,6 +123,10 @@ func (db *dictDb) GetUser(id string) (*internal.User, error) {
 	return db.users[id], nil
 }
 
+func (db *dictDb) IsAdmin(userId string) (bool, error) {
+	return slices.Contains(db.admins, userId), nil
+}
+
 func (db *dictDb) IsNoteOwner(noteId string, principalId string) (bool, error) {
 	n, ok := db.notes[noteId]
 
@@ -132,6 +138,8 @@ func (db *dictDb) IsNoteOwner(noteId string, principalId string) (bool, error) {
 }
 
 func (db *dictDb) Initialize() error {
+	db.admins = []string{"admin"}
+
 	db.notes = map[string]*internal.Note{
 		"dogs":    {Id: "dogs", Title: "Doggos", Text: "doggos are sweet", LastModified: 0, UserId: "tom"},
 		"cats":    {Id: "cats", Title: "Cattos", Text: "meowowow", LastModified: 0, UserId: "tom"},

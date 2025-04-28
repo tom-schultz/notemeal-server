@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"notemeal-server/internal"
 	"notemeal-server/internal/database"
@@ -81,14 +80,14 @@ func (handler *noteHandler) authorizePrincipal() bool {
 	isOwner, err := (*handler.Db).IsNoteOwner(handler.ObjId, handler.PrincipalId)
 
 	if err != nil {
-		fmt.Println(err)
-		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		internal.LogRequestError(err, handler.Request)
+		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
 
 	if !isOwner {
-		fmt.Println("Principal is not authorized!")
-		handler.Writer.WriteHeader(http.StatusUnauthorized)
+		internal.LogRequestMsg("Principal is not authorized!", handler.Request)
+		handler.setStatus(http.StatusUnauthorized)
 		return false
 	}
 
@@ -99,8 +98,8 @@ func (handler *noteHandler) deleteNote() bool {
 	err := (*handler.Db).DeleteNote(handler.ObjId)
 
 	if err != nil {
-		fmt.Println(err)
-		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		internal.LogRequestError(err, handler.Request)
+		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
 
@@ -112,9 +111,9 @@ func (handler *noteHandler) getNoteFromBody() bool {
 	err := json.Unmarshal(handler.RequestBody, handler.note)
 
 	if err != nil {
-		fmt.Println(err)
-		fmt.Printf("Could not deserialize note from body string!\n")
-		handler.Writer.WriteHeader(http.StatusBadRequest)
+		internal.LogRequestError(err, handler.Request)
+		internal.LogRequestMsg("Could not deserialize note from body string!\n", handler.Request)
+		handler.setStatus(http.StatusBadRequest)
 		return false
 	}
 
@@ -127,13 +126,13 @@ func (handler *noteHandler) getNoteFromDb() bool {
 	handler.note, err = (*handler.Db).GetNote(handler.ObjId)
 
 	if err != nil {
-		fmt.Println(err)
-		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		internal.LogRequestError(err, handler.Request)
+		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
 
 	if handler.note == nil {
-		handler.Writer.WriteHeader(http.StatusNotFound)
+		handler.setStatus(http.StatusNotFound)
 		return false
 	}
 
@@ -145,8 +144,8 @@ func (handler *noteHandler) listNotesFromDb(userId string) bool {
 	handler.noteList, err = (*handler.Db).ListLastModified(userId)
 
 	if err != nil {
-		fmt.Println(err)
-		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		internal.LogRequestError(err, handler.Request)
+		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
 
@@ -154,7 +153,7 @@ func (handler *noteHandler) listNotesFromDb(userId string) bool {
 }
 
 func startNoteRequest(writer http.ResponseWriter, request *http.Request, db *database.Database) (*noteHandler, bool) {
-	fmt.Printf("%s %s : start\n", request.Method, request.URL)
+	internal.LogRequestStart(request)
 
 	handler := &noteHandler{
 		baseHandler: baseHandler{
@@ -170,16 +169,16 @@ func startNoteRequest(writer http.ResponseWriter, request *http.Request, db *dat
 
 func (handler *noteHandler) updateNoteInDb() bool {
 	if handler.ObjId != handler.note.Id {
-		fmt.Println("Path objId does not match body objId!")
-		handler.Writer.WriteHeader(http.StatusBadRequest)
+		internal.LogRequestMsg("Path objId does not match body objId!", handler.Request)
+		handler.setStatus(http.StatusBadRequest)
 		return false
 	}
 
 	err := (*handler.Db).UpdateNote(handler.note)
 
 	if err != nil {
-		fmt.Println(err)
-		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		internal.LogRequestError(err, handler.Request)
+		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
 

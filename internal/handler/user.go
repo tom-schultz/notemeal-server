@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"notemeal-server/internal"
 	"notemeal-server/internal/database"
@@ -61,23 +60,12 @@ func PutUser(writer http.ResponseWriter, request *http.Request) {
 	handler.endRequest(result)
 }
 
-func (handler *userHandler) authorizePrincipal() bool {
-	authorized := handler.PrincipalId == handler.ObjId
-
-	if !authorized {
-		fmt.Printf("%s is not authorized for operations on %s!\n", handler.PrincipalId, handler.ObjId)
-		handler.Writer.WriteHeader(http.StatusUnauthorized)
-	}
-
-	return authorized
-}
-
 func (handler *userHandler) deleteUser() bool {
 	err := (*handler.Db).DeleteUser(handler.ObjId)
 
 	if err != nil {
-		fmt.Println(err)
-		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		internal.LogRequestError(err, handler.Request)
+		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
 
@@ -89,13 +77,13 @@ func (handler *userHandler) getUserFromDb() bool {
 	handler.user, err = (*handler.Db).GetUser(handler.ObjId)
 
 	if err != nil {
-		fmt.Println(err)
-		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		internal.LogRequestError(err, handler.Request)
+		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
 
 	if handler.user == nil {
-		handler.Writer.WriteHeader(http.StatusNotFound)
+		handler.setStatus(http.StatusNotFound)
 		return false
 	}
 
@@ -107,9 +95,9 @@ func (handler *userHandler) getUserFromBody() bool {
 	err := json.Unmarshal(handler.RequestBody, handler.user)
 
 	if err != nil {
-		fmt.Println(err)
-		fmt.Printf("Could not deserialize user from body string!\n")
-		handler.Writer.WriteHeader(http.StatusBadRequest)
+		internal.LogRequestError(err, handler.Request)
+		internal.LogRequestMsg("Could not deserialize user from body string!\n", handler.Request)
+		handler.setStatus(http.StatusBadRequest)
 		return false
 	}
 
@@ -118,7 +106,7 @@ func (handler *userHandler) getUserFromBody() bool {
 }
 
 func startUserRequest(writer http.ResponseWriter, request *http.Request, db *database.Database) (*userHandler, bool) {
-	fmt.Printf("%s %s : start\n", request.Method, request.URL)
+	internal.LogRequestStart(request)
 
 	handler := &userHandler{
 		baseHandler: baseHandler{
@@ -134,16 +122,16 @@ func startUserRequest(writer http.ResponseWriter, request *http.Request, db *dat
 
 func (handler *userHandler) writeUserToDb() bool {
 	if handler.ObjId != handler.user.Id {
-		fmt.Println("Path objId does not match body objId!")
-		handler.Writer.WriteHeader(http.StatusBadRequest)
+		internal.LogRequestMsg("Path objId does not match body objId!", handler.Request)
+		handler.setStatus(http.StatusBadRequest)
 		return false
 	}
 
 	err := (*handler.Db).SetUser(handler.user)
 
 	if err != nil {
-		fmt.Println(err)
-		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		internal.LogRequestError(err, handler.Request)
+		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
 

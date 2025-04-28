@@ -15,6 +15,7 @@ type Database interface {
 	GetNote(id string) (*internal.Note, error)
 	GetToken(token string) (*internal.Token, error)
 	GetUser(id string) (*internal.User, error)
+	IsAdmin(userId string) (bool, error)
 	IsNoteOwner(noteId string, principalId string) (bool, error)
 	Initialize() error
 	ListLastModified(userId string) (map[string]int, error)

@@ -1,14 +1,14 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
+	"notemeal-server/internal"
 	"notemeal-server/internal/database"
 )
 
 type codeHandler struct {
 	baseHandler
-	code string
+	codeData map[string]string
 }
 
 func PutCode(writer http.ResponseWriter, request *http.Request) {
@@ -26,23 +26,13 @@ func PutCode(writer http.ResponseWriter, request *http.Request) {
 	handler.endRequest(result)
 }
 
-func (handler *codeHandler) authorizePrincipal() bool {
-	authorized := handler.PrincipalId == handler.ObjId
-
-	if !authorized {
-		fmt.Printf("%s is not authorized for operations on %s!\n", handler.PrincipalId, handler.ObjId)
-		handler.Writer.WriteHeader(http.StatusUnauthorized)
-	}
-
-	return authorized
-}
-
 func (handler *codeHandler) createTokenCode() bool {
-	_, err := (*handler.Db).CreateOrUpdateCode(handler.ObjId)
+	code, err := (*handler.Db).CreateOrUpdateCode(handler.ObjId)
+	handler.codeData = map[string]string{internal.CodeJsonKey: code}
 
 	if err != nil {
-		fmt.Println(err)
-		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		internal.LogRequestError(err, handler.Request)
+		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
 
@@ -50,7 +40,7 @@ func (handler *codeHandler) createTokenCode() bool {
 }
 
 func startCodeRequest(writer http.ResponseWriter, request *http.Request, db *database.Database) (*codeHandler, bool) {
-	fmt.Printf("%s %s : start\n", request.Method, request.URL)
+	internal.LogRequestStart(request)
 
 	handler := &codeHandler{
 		baseHandler: baseHandler{

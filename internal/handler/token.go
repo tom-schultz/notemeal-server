@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"notemeal-server/internal"
 	"notemeal-server/internal/database"
@@ -30,14 +29,14 @@ func (handler *tokenHandler) createToken() bool {
 	handler.token, err = (*handler.Db).CreateToken(handler.ObjId, handler.code)
 
 	if err != nil {
-		fmt.Println(err)
-		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		internal.LogRequestError(err, handler.Request)
+		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
 
 	if handler.token == "" {
-		fmt.Println("Invalid code!")
-		handler.Writer.WriteHeader(http.StatusUnauthorized)
+		internal.LogRequestMsg("Invalid code!", handler.Request)
+		handler.setStatus(http.StatusUnauthorized)
 	}
 
 	return true
@@ -48,9 +47,9 @@ func (handler *tokenHandler) getCodeFromBody() bool {
 	err := json.Unmarshal(handler.RequestBody, &data)
 
 	if err != nil {
-		fmt.Println(err)
-		fmt.Printf("Could not deserialize token code from body string!\n")
-		handler.Writer.WriteHeader(http.StatusBadRequest)
+		internal.LogRequestError(err, handler.Request)
+		internal.LogRequestMsg("Could not deserialize token code from body string!\n", handler.Request)
+		handler.setStatus(http.StatusBadRequest)
 		return false
 	}
 
@@ -59,7 +58,7 @@ func (handler *tokenHandler) getCodeFromBody() bool {
 }
 
 func startTokenRequest(writer http.ResponseWriter, request *http.Request, db *database.Database) *tokenHandler {
-	fmt.Printf("%s %s : start\n", request.Method, request.URL)
+	internal.LogRequestStart(request)
 
 	return &tokenHandler{
 		baseHandler: baseHandler{

@@ -6,6 +6,7 @@ import (
 
 func ServeMux() *http.ServeMux {
 	mux := http.NewServeMux()
+	mux.HandleFunc("PUT /admin/user/{id}/code", PutCodeAdmin)
 	mux.HandleFunc("DELETE /note/{id}", DeleteNote)
 	mux.HandleFunc("GET /note/{id}", GetNote)
 	mux.HandleFunc("PUT /note/{id}", PutNote)

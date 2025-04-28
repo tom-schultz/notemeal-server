@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"notemeal-server/internal"
 	"notemeal-server/internal/database"
 )
 
@@ -12,19 +13,28 @@ const objIdKey string = "id"
 
 type baseHandler struct {
 	Db          *database.Database
-	Request     *http.Request
-	RequestBody []byte
-	Writer      http.ResponseWriter
 	ObjId       string
 	PrincipalId string
+	Request     *http.Request
+	RequestBody []byte
+	StatusCode  int
+	Writer      http.ResponseWriter
+}
+
+func (handler *baseHandler) authorizePrincipal() bool {
+	authorized := handler.PrincipalId == handler.ObjId
+
+	if !authorized {
+		msg := fmt.Sprintf("%s is not authorized for operations on %s!\n", handler.PrincipalId, handler.ObjId)
+		internal.LogRequestMsg(msg, handler.Request)
+		handler.setStatus(http.StatusUnauthorized)
+	}
+
+	return authorized
 }
 
 func (handler *baseHandler) endRequest(success bool) {
-	if success {
-		fmt.Printf("%s %s : success\n", handler.Request.Method, handler.Request.URL)
-	} else {
-		fmt.Printf("%s %s : failure\n", handler.Request.Method, handler.Request.URL)
-	}
+	internal.LogRequestEnd(handler.Request, handler.StatusCode)
 }
 
 func (handler *baseHandler) getAuth() bool {
@@ -33,42 +43,42 @@ func (handler *baseHandler) getAuth() bool {
 	handler.PrincipalId, tokenString, ok = handler.Request.BasicAuth()
 
 	if !ok {
-		fmt.Println("Failed to find auth!")
-		handler.Writer.WriteHeader(http.StatusUnauthorized)
+		internal.LogRequestMsg("Failed to find auth!", handler.Request)
+		handler.setStatus(http.StatusUnauthorized)
 		return false
 	}
 
 	user, err := (*handler.Db).GetUser(handler.PrincipalId)
 
 	if err != nil {
-		fmt.Println(err)
-		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		internal.LogRequestError(err, handler.Request)
+		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
 
 	if user == nil {
-		fmt.Println("Failed to find auth user in database!")
-		handler.Writer.WriteHeader(http.StatusUnauthorized)
+		internal.LogRequestMsg("Failed to find auth user in database!", handler.Request)
+		handler.setStatus(http.StatusUnauthorized)
 		return false
 	}
 
 	token, err := (*handler.Db).GetToken(tokenString)
 
 	if err != nil {
-		fmt.Println(err)
-		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		internal.LogRequestError(err, handler.Request)
+		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
 
 	if token == nil {
-		fmt.Println("Failed to find auth token in database!")
-		handler.Writer.WriteHeader(http.StatusUnauthorized)
+		internal.LogRequestMsg("Failed to find auth token in database!", handler.Request)
+		handler.setStatus(http.StatusUnauthorized)
 		return false
 	}
 
 	if token.UserId != handler.PrincipalId {
-		fmt.Println("Token does not belong to user!")
-		handler.Writer.WriteHeader(http.StatusUnauthorized)
+		internal.LogRequestMsg("Token does not belong to user!", handler.Request)
+		handler.setStatus(http.StatusUnauthorized)
 		return false
 	}
 
@@ -80,9 +90,9 @@ func (handler *baseHandler) getBodyString() bool {
 	handler.RequestBody, err = io.ReadAll(handler.Request.Body)
 
 	if err != nil {
-		fmt.Println(err)
-		fmt.Println("Could not retrieve body string from Request!")
-		handler.Writer.WriteHeader(http.StatusBadRequest)
+		internal.LogRequestError(err, handler.Request)
+		internal.LogRequestMsg("Could not retrieve body string from Request!", handler.Request)
+		handler.setStatus(http.StatusBadRequest)
 		return false
 	}
 
@@ -94,20 +104,25 @@ func (handler *baseHandler) getObjId() bool {
 
 	if handler.ObjId == "" {
 		err := Error{"Could not get nodeId from path!"}
-		fmt.Println(err)
-		handler.Writer.WriteHeader(http.StatusBadRequest)
+		internal.LogRequestError(err, handler.Request)
+		handler.setStatus(http.StatusBadRequest)
 		return false
 	}
 
 	return true
 }
 
+func (handler *baseHandler) setStatus(status int) {
+	handler.StatusCode = status
+	handler.Writer.WriteHeader(status)
+}
+
 func (handler *baseHandler) writeValueToResponse(value any) bool {
 	body, err := json.Marshal(value)
 
 	if err != nil {
-		fmt.Println(err)
-		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		internal.LogRequestError(err, handler.Request)
+		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
 
@@ -115,8 +130,8 @@ func (handler *baseHandler) writeValueToResponse(value any) bool {
 	_, err = handler.Writer.Write(body)
 
 	if err != nil {
-		fmt.Println(err)
-		handler.Writer.WriteHeader(http.StatusInternalServerError)
+		internal.LogRequestError(err, handler.Request)
+		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
 
