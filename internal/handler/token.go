@@ -9,8 +9,8 @@ import (
 
 type tokenHandler struct {
 	baseHandler
-	code  string
-	token string
+	code        string
+	clientToken *internal.ClientToken
 }
 
 func PostToken(writer http.ResponseWriter, request *http.Request) {
@@ -21,12 +21,13 @@ func PostToken(writer http.ResponseWriter, request *http.Request) {
 		handler.getCodeFromBody() &&
 		handler.createToken() &&
 		handler.writeTokenToResponse()
+
 	handler.endRequest(result)
 }
 
 func (handler *tokenHandler) createToken() bool {
 	var err error
-	handler.token, err = (*handler.Db).CreateToken(handler.ObjId, handler.code)
+	handler.clientToken, err = (*handler.Db).CreateToken(handler.ObjId, handler.code)
 
 	if err != nil {
 		internal.LogRequestError(err, handler.Request)
@@ -34,9 +35,10 @@ func (handler *tokenHandler) createToken() bool {
 		return false
 	}
 
-	if handler.token == "" {
+	if handler.clientToken == nil {
 		internal.LogRequestMsg("Invalid code!", handler.Request)
 		handler.setStatus(http.StatusUnauthorized)
+		return false
 	}
 
 	return true
@@ -70,6 +72,5 @@ func startTokenRequest(writer http.ResponseWriter, request *http.Request, db *da
 }
 
 func (handler *tokenHandler) writeTokenToResponse() bool {
-	data := map[string]string{internal.TokenJsonKey: handler.token}
-	return handler.writeValueToResponse(data)
+	return handler.writeValueToResponse(*handler.clientToken)
 }

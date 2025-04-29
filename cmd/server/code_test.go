@@ -51,7 +51,7 @@ func TestPutCodeDifferentPrincipal(t *testing.T) {
 	token := test.SetupAuth(principalId)
 
 	req := test.NewReq(http.MethodPut, url, nil)
-	req.SetBasicAuth(principalId, token)
+	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusUnauthorized)
 }
@@ -67,7 +67,7 @@ func TestCodePutNew(t *testing.T) {
 
 	url := getCodeUrl(userId, ts.URL)
 	req := test.NewReq(http.MethodPut, url, nil)
-	req.SetBasicAuth(userId, token)
+	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 
@@ -90,7 +90,7 @@ func TestCodePutUpdate(t *testing.T) {
 
 	url := getCodeUrl(userId, ts.URL)
 	req := test.NewReq(http.MethodPut, url, nil)
-	req.SetBasicAuth(userId, token)
+	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 

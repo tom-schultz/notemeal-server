@@ -21,7 +21,7 @@ type baseHandler struct {
 	Writer      http.ResponseWriter
 }
 
-func (handler *baseHandler) authorizePrincipal() bool {
+func (handler *baseHandler) authorizeOwnsObj() bool {
 	authorized := handler.PrincipalId == handler.ObjId
 
 	if !authorized {
@@ -37,10 +37,10 @@ func (handler *baseHandler) endRequest(success bool) {
 	internal.LogRequestEnd(handler.Request, handler.StatusCode)
 }
 
-func (handler *baseHandler) getAuth() bool {
+func (handler *baseHandler) authenticate() bool {
 	var ok bool
 	var tokenString string
-	handler.PrincipalId, tokenString, ok = handler.Request.BasicAuth()
+	tokenId, tokenString, ok := handler.Request.BasicAuth()
 
 	if !ok {
 		internal.LogRequestMsg("Failed to find auth!", handler.Request)
@@ -48,7 +48,7 @@ func (handler *baseHandler) getAuth() bool {
 		return false
 	}
 
-	user, err := (*handler.Db).GetUser(handler.PrincipalId)
+	principalToken, err := (*handler.Db).GetToken(tokenId)
 
 	if err != nil {
 		internal.LogRequestError(err, handler.Request)
@@ -56,32 +56,21 @@ func (handler *baseHandler) getAuth() bool {
 		return false
 	}
 
-	if user == nil {
-		internal.LogRequestMsg("Failed to find auth user in database!", handler.Request)
+	if principalToken == nil {
+		internal.LogRequestMsg("Failed to find token in database!", handler.Request)
 		handler.setStatus(http.StatusUnauthorized)
 		return false
 	}
 
-	token, err := (*handler.Db).GetToken(tokenString)
+	err = database.CompareHashAndString(principalToken.Hash, tokenString)
 
 	if err != nil {
-		internal.LogRequestError(err, handler.Request)
-		handler.setStatus(http.StatusInternalServerError)
-		return false
-	}
-
-	if token == nil {
-		internal.LogRequestMsg("Failed to find auth token in database!", handler.Request)
+		internal.LogRequestMsg("Invalid token!", handler.Request)
 		handler.setStatus(http.StatusUnauthorized)
 		return false
 	}
 
-	if token.UserId != handler.PrincipalId {
-		internal.LogRequestMsg("Token does not belong to user!", handler.Request)
-		handler.setStatus(http.StatusUnauthorized)
-		return false
-	}
-
+	handler.PrincipalId = principalToken.UserId
 	return true
 }
 

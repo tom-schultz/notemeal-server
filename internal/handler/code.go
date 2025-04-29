@@ -20,7 +20,7 @@ func PutCode(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	result := handler.getObjId() &&
-		handler.authorizePrincipal() &&
+		handler.authorizeOwnsObj() &&
 		handler.createTokenCode()
 
 	handler.endRequest(result)
@@ -50,6 +50,6 @@ func startCodeRequest(writer http.ResponseWriter, request *http.Request, db *dat
 		},
 	}
 
-	authenticated := handler.getAuth()
+	authenticated := handler.authenticate()
 	return handler, authenticated
 }

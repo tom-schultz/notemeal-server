@@ -9,7 +9,8 @@ import (
 
 type adminHandler struct {
 	codeHandler
-	code string
+	code  string
+	token string
 }
 
 func PutCodeAdmin(writer http.ResponseWriter, request *http.Request) {
@@ -21,14 +22,14 @@ func PutCodeAdmin(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	result := handler.getObjId() &&
-		handler.authorizePrincipal() &&
+		handler.authorizeAdmin() &&
 		handler.createTokenCode() &&
 		handler.writeValueToResponse(handler.codeData)
 
 	handler.endRequest(result)
 }
 
-func (handler *adminHandler) authorizePrincipal() bool {
+func (handler *adminHandler) authorizeAdmin() bool {
 	authorized, err := (*handler.Db).IsAdmin(handler.PrincipalId)
 
 	if err != nil {
@@ -57,6 +58,6 @@ func startAdminRequest(writer http.ResponseWriter, request *http.Request, db *da
 			}},
 	}
 
-	authenticated := handler.getAuth()
+	authenticated := handler.authenticate()
 	return handler, authenticated
 }

@@ -21,7 +21,7 @@ func DeleteUser(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	result := handler.getObjId() &&
-		handler.authorizePrincipal() &&
+		handler.authorizeOwnsObj() &&
 		handler.deleteUser()
 
 	handler.endRequest(result)
@@ -36,7 +36,7 @@ func GetUser(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	result := handler.getObjId() &&
-		handler.authorizePrincipal() &&
+		handler.authorizeOwnsObj() &&
 		handler.getUserFromDb() &&
 		handler.writeValueToResponse(handler.user)
 
@@ -52,7 +52,7 @@ func PutUser(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	result := handler.getObjId() &&
-		handler.authorizePrincipal() &&
+		handler.authorizeOwnsObj() &&
 		handler.getBodyString() &&
 		handler.getUserFromBody() &&
 		handler.writeUserToDb()
@@ -116,7 +116,7 @@ func startUserRequest(writer http.ResponseWriter, request *http.Request, db *dat
 		},
 	}
 
-	authenticated := handler.getAuth()
+	authenticated := handler.authenticate()
 	return handler, authenticated
 }
 

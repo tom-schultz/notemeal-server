@@ -40,7 +40,7 @@ func TestUserDeleteDifferentPrincipal(t *testing.T) {
 	token := test.SetupAuth(userId)
 
 	req := test.NewReq(http.MethodDelete, url, nil)
-	req.SetBasicAuth(userId, token)
+	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusUnauthorized)
 }
@@ -60,7 +60,7 @@ func TestUserDelete(t *testing.T) {
 	}
 
 	req := test.NewReq(http.MethodDelete, url, nil)
-	req.SetBasicAuth(principalId, token)
+	req.SetBasicAuth(token.Id, token.Token)
 	test.SendReq(req)
 	deletedUser = getUser(objId)
 	test.ExpectEqual(deletedUser, nil)
@@ -82,7 +82,7 @@ func TestUserGetDifferentPrincipal(t *testing.T) {
 	token := test.SetupAuth(principalId)
 
 	req := test.NewReq(http.MethodGet, url, nil)
-	req.SetBasicAuth(principalId, token)
+	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusUnauthorized)
 }
@@ -95,7 +95,7 @@ func TestUserGet(t *testing.T) {
 	token := test.SetupAuth(userId)
 
 	req := test.NewReq(http.MethodGet, url, nil)
-	req.SetBasicAuth(userId, token)
+	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 
@@ -119,7 +119,7 @@ func TestUserPutDifferentPrincipal(t *testing.T) {
 	token := test.SetupAuth(principalId)
 
 	req := test.NewReq(http.MethodPut, url, nil)
-	req.SetBasicAuth(principalId, token)
+	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusUnauthorized)
 }
@@ -133,7 +133,7 @@ func TestUserPut(t *testing.T) {
 
 	putUser := &internal.User{Id: userId, Email: "new@email.com"}
 	req := test.NewReq(http.MethodPut, url, test.Serialize(putUser))
-	req.SetBasicAuth(userId, token)
+	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 
@@ -150,7 +150,7 @@ func TestUserPutIdChanged(t *testing.T) {
 
 	putUser := &internal.User{Id: "malicious", Email: "new@email.com"}
 	req := test.NewReq(http.MethodPut, url, test.Serialize(putUser))
-	req.SetBasicAuth(userId, token)
+	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 

@@ -31,7 +31,7 @@ func TestNotesGet(t *testing.T) {
 	token := test.SetupAuth(user)
 
 	req := test.NewReq("GET", ts.URL+"/notes", nil)
-	req.SetBasicAuth(user, token)
+	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 

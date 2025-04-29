@@ -37,12 +37,12 @@ func TestTokenPost(t *testing.T) {
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 
-	respData := make(map[string]string)
-	test.GetBodyData(resp, &respData)
-	respToken := respData[internal.TokenJsonKey]
-	dbToken := getToken(respToken)
+	var clientToken internal.ClientToken
+	test.GetBodyData(resp, &clientToken)
+	dbToken := getToken(clientToken.Id)
 	test.ExpectNotEqual(dbToken, nil)
-	test.ExpectEqual(database.HashString(respToken), dbToken.TokenHash)
+	err := database.CompareHashAndString(dbToken.Hash, clientToken.Token)
+	test.ExpectEqual(err, nil)
 }
 
 func TestTokenPostFakeCode(t *testing.T) {

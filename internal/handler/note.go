@@ -163,7 +163,7 @@ func startNoteRequest(writer http.ResponseWriter, request *http.Request, db *dat
 		},
 	}
 
-	authenticated := handler.getAuth()
+	authenticated := handler.authenticate()
 	return handler, authenticated
 }
 

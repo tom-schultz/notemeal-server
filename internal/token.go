@@ -3,6 +3,12 @@ package internal
 const TokenJsonKey string = "token"
 
 type Token struct {
-	UserId    string
-	TokenHash string
+	Id     string
+	UserId string
+	Hash   string
+}
+
+type ClientToken struct {
+	Id    string
+	Token string
 }

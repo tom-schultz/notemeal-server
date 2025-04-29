@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"notemeal-server/internal"
 	"notemeal-server/internal/database"
 	"notemeal-server/internal/handler"
 )
@@ -86,7 +87,7 @@ func SendReq(req *http.Request) *http.Response {
 	return resp
 }
 
-func SetupAuth(user string) string {
+func SetupAuth(user string) internal.ClientToken {
 	code, err := database.Db.CreateOrUpdateCode(user)
 
 	if err != nil {
@@ -99,7 +100,7 @@ func SetupAuth(user string) string {
 		log.Fatal(err)
 	}
 
-	return token
+	return *token
 }
 
 func Serialize(v any) []byte {

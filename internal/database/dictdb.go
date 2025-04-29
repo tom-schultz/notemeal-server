@@ -1,7 +1,9 @@
 package database
 
 import (
+	"github.com/google/uuid"
 	"log"
+	"log/slog"
 	"maps"
 	"notemeal-server/internal"
 	"slices"
@@ -31,45 +33,64 @@ func (db *dictDb) CreateOrUpdateCode(userId string) (string, error) {
 	}
 
 	expiration := time.Now().Add(time.Hour)
-	code := "blue cat dog"
-	codeHash := HashString(code)
+	code := CreateSecureString()
+	hash, err := HashString(code)
 
-	if code, ok := db.codes[userId]; ok {
-		code.Expiration = expiration
-	} else {
-		db.codes[userId] = &internal.Code{
-			UserId:     userId,
-			CodeHash:   codeHash,
-			Expiration: expiration,
-		}
+	if err != nil {
+		return "", err
+	}
+
+	db.codes[userId] = &internal.Code{
+		UserId:     userId,
+		Hash:       hash,
+		Expiration: expiration,
 	}
 
 	return code, nil
 }
 
-func (db *dictDb) CreateToken(userId string, CodeString string) (string, error) {
+func (db *dictDb) CreateToken(userId string, codeString string) (*internal.ClientToken, error) {
 	if !db.initialized {
-		return "", DbError{"Database not initialized!"}
+		return nil, DbError{"Database not initialized!"}
 	}
 
-	hashedCodeString := HashString(CodeString)
 	code := db.codes[userId]
 
 	if code == nil {
-		return "", nil
+		return nil, nil
 	}
 
-	if !CompareHashedString(hashedCodeString, code.CodeHash) || code.Expiration.Before(time.Now()) {
-		return "", nil
+	err := CompareHashAndString(code.Hash, codeString)
+
+	if err != nil {
+		return nil, nil
 	}
 
-	token := "123456"
-	tokenHash := HashString(token)
+	if code.Expiration.Before(time.Now()) {
+		slog.Error("Cannot create tokenStr with expired code!", "user", userId)
+		return nil, nil
+	}
 
-	db.tokens[tokenHash] = &internal.Token{TokenHash: tokenHash, UserId: userId}
+	tokenStr := CreateSecureString()
+	tokenHash, err := HashString(tokenStr)
+
+	if err != nil {
+		return nil, err
+	}
+
+	id := uuid.New().String()
+
+	db.tokens[id] = &internal.Token{
+		Id:     id,
+		Hash:   tokenHash,
+		UserId: userId}
+
+	clientToken := &internal.ClientToken{
+		Id:    id,
+		Token: tokenStr}
+
 	delete(db.codes, userId)
-
-	return token, nil
+	return clientToken, nil
 }
 
 func (db *dictDb) DeleteUser(id string) error {
@@ -106,13 +127,13 @@ func (db *dictDb) GetNote(id string) (*internal.Note, error) {
 	return db.notes[id], nil
 }
 
-func (db *dictDb) GetToken(token string) (*internal.Token, error) {
+func (db *dictDb) GetToken(tokenId string) (*internal.Token, error) {
 	if !db.initialized {
 		return nil, DbError{"Database not initialized!"}
 	}
 
-	tokenHash := HashString(token)
-	return db.tokens[tokenHash], nil
+	token, _ := db.tokens[tokenId]
+	return token, nil
 }
 
 func (db *dictDb) GetUser(id string) (*internal.User, error) {
@@ -154,8 +175,14 @@ func (db *dictDb) Initialize() error {
 		"admin":        {Id: "admin", Email: "fakeadmin@fake.com"},
 	}
 
+	hash, err := HashString("expired")
+
+	if err != nil {
+		log.Fatal("Hash error during DB initialization!")
+	}
+
 	db.codes = map[string]*internal.Code{
-		"expired": {"expired-code", "!!expired", time.Unix(0, 0)},
+		"expired-code": {"expired-code", hash, time.Unix(0, 0)},
 	}
 
 	db.tokens = map[string]*internal.Token{}

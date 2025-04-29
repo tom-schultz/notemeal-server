@@ -23,7 +23,7 @@ func TestPutCodeAdminNotAdmin(t *testing.T) {
 	token := test.SetupAuth(principalId)
 
 	req := test.NewReq(http.MethodPut, url, nil)
-	req.SetBasicAuth(principalId, token)
+	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusUnauthorized)
 }
@@ -40,7 +40,7 @@ func TestCodeAdminPutNew(t *testing.T) {
 
 	url := getAdminCodeUrl(userId, ts.URL)
 	req := test.NewReq(http.MethodPut, url, nil)
-	req.SetBasicAuth(principalId, token)
+	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 
@@ -64,7 +64,7 @@ func TestCodeAdminPutUpdate(t *testing.T) {
 
 	url := getAdminCodeUrl(userId, ts.URL)
 	req := test.NewReq(http.MethodPut, url, nil)
-	req.SetBasicAuth(principalId, token)
+	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 
@@ -76,5 +76,7 @@ func TestCodeAdminPutUpdate(t *testing.T) {
 
 	dbCode := getCode(userId)
 	test.ExpectNotEqual(dbCode, nil)
-	test.ExpectEqual(dbCode.CodeHash, database.HashString(bodyData[internal.CodeJsonKey]))
+
+	err := database.CompareHashAndString(dbCode.Hash, bodyData[internal.CodeJsonKey])
+	test.ExpectEqual(err, nil)
 }

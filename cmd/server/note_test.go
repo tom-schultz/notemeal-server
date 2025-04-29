@@ -46,7 +46,7 @@ func TestNoteDelete(t *testing.T) {
 
 	url := fmt.Sprintf("%s/note/%s", ts.URL, noteId)
 	req := test.NewReq(http.MethodDelete, url, nil)
-	req.SetBasicAuth(user, token)
+	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 
@@ -73,7 +73,7 @@ func TestNoteGet(t *testing.T) {
 
 	url := fmt.Sprintf("%s/note/%s", ts.URL, noteId)
 	req := test.NewReq(http.MethodGet, url, nil)
-	req.SetBasicAuth(user, token)
+	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 
@@ -91,7 +91,7 @@ func TestNotePut(t *testing.T) {
 
 	url := fmt.Sprintf("%s/note/%s", ts.URL, noteId)
 	req := test.NewReq(http.MethodPut, url, test.Serialize(putNote))
-	req.SetBasicAuth(user, token)
+	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 
