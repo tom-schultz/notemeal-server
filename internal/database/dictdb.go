@@ -1,7 +1,7 @@
 package database
 
 import (
-	"github.com/google/uuid"
+	"crypto/rand"
 	"log"
 	"log/slog"
 	"maps"
@@ -78,7 +78,13 @@ func (db *dictDb) CreateToken(userId string, codeString string) (*internal.Clien
 		return nil, err
 	}
 
-	id := uuid.New().String()
+	id := rand.Text()
+	_, ok := db.tokens[id]
+
+	for ok {
+		id = rand.Text()
+		_, ok = db.tokens[id]
+	}
 
 	db.tokens[id] = &internal.Token{
 		Id:     id,
