@@ -10,6 +10,14 @@ import (
 	"testing"
 )
 
+func createNote(n *internal.Note) {
+	err := database.Db.CreateNote(n)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func getNote(id string) *internal.Note {
 	note, err := database.Db.GetNote(id)
 
@@ -81,7 +89,25 @@ func TestNoteGet(t *testing.T) {
 	test.ExpectBody(resp, test.Serialize(note))
 }
 
-func TestNotePut(t *testing.T) {
+func TestNotePutCreate(t *testing.T) {
+	ts := test.Server()
+	defer ts.Close()
+	user := "tom"
+	noteId := "wuppers"
+	postNote := &internal.Note{Id: noteId, Text: "woof woof", Title: "Puppers", UserId: user, LastModified: 0}
+	token := test.SetupAuth(user)
+
+	url := fmt.Sprintf("%s/note/%s", ts.URL, noteId)
+	req := test.NewReq(http.MethodPut, url, test.Serialize(postNote))
+	req.SetBasicAuth(token.Id, token.Token)
+	resp := test.SendReq(req)
+	test.ExpectStatusCode(resp, http.StatusOK)
+
+	dbNote := getNote(noteId)
+	test.ExpectEqual(*dbNote, *postNote)
+}
+
+func TestNotePutUpdate(t *testing.T) {
 	ts := test.Server()
 	defer ts.Close()
 	user := "tom"
@@ -103,5 +129,5 @@ func TestNotePutNoAuth(t *testing.T) {
 	ts := test.Server()
 	defer ts.Close()
 	url := getNoteUrl("dogs", ts.URL)
-	test.UnauthorizedTest("PUT", url, nil)
+	test.UnauthorizedTest(http.MethodPut, url, nil)
 }

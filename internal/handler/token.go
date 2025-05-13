@@ -45,8 +45,8 @@ func (handler *tokenHandler) createToken() bool {
 }
 
 func (handler *tokenHandler) getCodeFromBody() bool {
-	data := map[string]string{}
-	err := json.Unmarshal(handler.RequestBody, &data)
+	clientCode := internal.ClientCode{}
+	err := json.Unmarshal(handler.RequestBody, &clientCode)
 
 	if err != nil {
 		internal.LogRequestError(err, handler.Request)
@@ -55,7 +55,7 @@ func (handler *tokenHandler) getCodeFromBody() bool {
 		return false
 	}
 
-	handler.code = data[internal.CodeJsonKey]
+	handler.code = clientCode.Code
 	return true
 }
 

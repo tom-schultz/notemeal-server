@@ -49,6 +49,21 @@ func (db *dictDb) CreateOrUpdateCode(userId string) (string, error) {
 	return code, nil
 }
 
+func (db *dictDb) CreateNote(newNote *internal.Note) error {
+	if !db.initialized {
+		return DbError{"Database not initialized!"}
+	}
+
+	_, ok := db.notes[newNote.Id]
+
+	if ok {
+		return DbError{"Note already exists!"}
+	}
+
+	db.notes[newNote.Id] = newNote
+	return nil
+}
+
 func (db *dictDb) CreateToken(userId string, codeString string) (*internal.ClientToken, error) {
 	if !db.initialized {
 		return nil, DbError{"Database not initialized!"}
@@ -168,10 +183,10 @@ func (db *dictDb) Initialize() error {
 	db.admins = []string{"admin"}
 
 	db.notes = map[string]*internal.Note{
-		"dogs":    {Id: "dogs", Title: "Doggos", Text: "doggos are sweet", LastModified: 0, UserId: "tom"},
-		"cats":    {Id: "cats", Title: "Cattos", Text: "meowowow", LastModified: 0, UserId: "tom"},
-		"rabbits": {Id: "rabbits", Title: "Buns", Text: "hoppity hop, motherfuckas", LastModified: 0, UserId: "tom"},
-		"goblins": {Id: "goblins", Title: "Gobbos", Text: "Grickle grackle", LastModified: 0, UserId: "mot"},
+		//"dogs":    {Id: "dogs", Title: "Doggos", Text: "doggos are sweet", LastModified: 0, UserId: "tom"},
+		//"cats":    {Id: "cats", Title: "Cattos", Text: "meowowow", LastModified: 0, UserId: "tom"},
+		//"rabbits": {Id: "rabbits", Title: "Buns", Text: "hoppity hop, motherfuckas", LastModified: 0, UserId: "tom"},
+		//"goblins": {Id: "goblins", Title: "Gobbos", Text: "Grickle grackle", LastModified: 0, UserId: "mot"},
 	}
 
 	db.users = map[string]*internal.User{
@@ -180,15 +195,17 @@ func (db *dictDb) Initialize() error {
 		"expired-code": {Id: "expired-code", Email: "expired@fake.com"},
 		"admin":        {Id: "admin", Email: "fakeadmin@fake.com"},
 	}
-
-	hash, err := HashString("expired")
+	expiredHash, err := HashString("expired")
 
 	if err != nil {
 		log.Fatal("Hash error during DB initialization!")
 	}
 
+	adminHash, err := HashString("turtles")
+
 	db.codes = map[string]*internal.Code{
-		"expired-code": {"expired-code", hash, time.Unix(0, 0)},
+		"expired-code": {"expired-code", expiredHash, time.Unix(0, 0)},
+		"admin":        {"admin", adminHash, time.Now().Add(time.Hour)},
 	}
 
 	db.tokens = map[string]*internal.Token{}

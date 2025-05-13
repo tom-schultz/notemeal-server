@@ -1,6 +1,6 @@
 package internal
 
 type User struct {
-	Id    string
-	Email string
+	Id    string `json:"id"`
+	Email string `json:"email"`
 }

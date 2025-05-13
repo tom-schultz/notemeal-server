@@ -9,8 +9,9 @@ import (
 
 type noteHandler struct {
 	baseHandler
-	note     *internal.Note
-	noteList map[string]int
+	note         *internal.Note
+	noteList     map[string]int
+	existingNote bool
 }
 
 func DeleteNote(writer http.ResponseWriter, request *http.Request) {
@@ -59,7 +60,6 @@ func PutNote(writer http.ResponseWriter, request *http.Request) {
 		handler.updateNoteInDb()
 
 	handler.endRequest(result)
-
 }
 
 func GetNotes(writer http.ResponseWriter, request *http.Request) {
@@ -77,7 +77,7 @@ func GetNotes(writer http.ResponseWriter, request *http.Request) {
 }
 
 func (handler *noteHandler) authorizePrincipal() bool {
-	isOwner, err := (*handler.Db).IsNoteOwner(handler.ObjId, handler.PrincipalId)
+	oldNote, err := (*handler.Db).GetNote(handler.ObjId)
 
 	if err != nil {
 		internal.LogRequestError(err, handler.Request)
@@ -85,10 +85,22 @@ func (handler *noteHandler) authorizePrincipal() bool {
 		return false
 	}
 
-	if !isOwner {
-		internal.LogRequestMsg("Principal is not authorized!", handler.Request)
-		handler.setStatus(http.StatusUnauthorized)
-		return false
+	handler.existingNote = oldNote != nil
+
+	if handler.existingNote {
+		isOwner, err := (*handler.Db).IsNoteOwner(handler.ObjId, handler.PrincipalId)
+
+		if err != nil {
+			internal.LogRequestError(err, handler.Request)
+			handler.setStatus(http.StatusInternalServerError)
+			return false
+		}
+
+		if !isOwner {
+			internal.LogRequestMsg("Principal is not authorized!", handler.Request)
+			handler.setStatus(http.StatusUnauthorized)
+			return false
+		}
 	}
 
 	return true
@@ -174,7 +186,14 @@ func (handler *noteHandler) updateNoteInDb() bool {
 		return false
 	}
 
-	err := (*handler.Db).UpdateNote(handler.note)
+	var err error
+	handler.note.UserId = handler.PrincipalId
+
+	if handler.existingNote {
+		err = (*handler.Db).UpdateNote(handler.note)
+	} else {
+		err = (*handler.Db).CreateNote(handler.note)
+	}
 
 	if err != nil {
 		internal.LogRequestError(err, handler.Request)

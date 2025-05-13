@@ -30,8 +30,8 @@ func TestTokenPost(t *testing.T) {
 	userId := "tom"
 	url := getTokenUrl(userId, ts.URL)
 	code := createCode(userId)
-	codeMap := map[string]string{internal.CodeJsonKey: code}
-	reqBody := test.Serialize(codeMap)
+	clientCode := internal.ClientCode{UserId: userId, Code: code}
+	reqBody := test.Serialize(clientCode)
 
 	req := test.NewReq(http.MethodPost, url, reqBody)
 	resp := test.SendReq(req)
@@ -51,8 +51,8 @@ func TestTokenPostFakeCode(t *testing.T) {
 	userId := "tom"
 	url := getTokenUrl(userId, ts.URL)
 	code := "mumbojumbo"
-	codeMap := map[string]string{internal.CodeJsonKey: code}
-	reqBody := test.Serialize(codeMap)
+	clientCode := internal.ClientCode{UserId: userId, Code: code}
+	reqBody := test.Serialize(clientCode)
 
 	req := test.NewReq(http.MethodPost, url, reqBody)
 	resp := test.SendReq(req)
@@ -66,8 +66,8 @@ func TestTokenPostWrongCode(t *testing.T) {
 	url := getTokenUrl(userId, ts.URL)
 	createCode(userId)
 	wrongCode := "mumbojumbo"
-	codeMap := map[string]string{internal.CodeJsonKey: wrongCode}
-	reqBody := test.Serialize(codeMap)
+	clientCode := internal.ClientCode{UserId: userId, Code: wrongCode}
+	reqBody := test.Serialize(clientCode)
 
 	req := test.NewReq(http.MethodPost, url, reqBody)
 	resp := test.SendReq(req)
@@ -80,8 +80,8 @@ func TestTokenPostExpiredCode(t *testing.T) {
 	userId := "expired-code"
 	url := getTokenUrl(userId, ts.URL)
 	code := "expired"
-	codeMap := map[string]string{internal.CodeJsonKey: code}
-	reqBody := test.Serialize(codeMap)
+	clientCode := internal.ClientCode{UserId: userId, Code: code}
+	reqBody := test.Serialize(clientCode)
 
 	req := test.NewReq(http.MethodPost, url, reqBody)
 	resp := test.SendReq(req)

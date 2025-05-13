@@ -8,7 +8,7 @@ import (
 
 type codeHandler struct {
 	baseHandler
-	codeData map[string]string
+	clientCode internal.ClientCode
 }
 
 func PutCode(writer http.ResponseWriter, request *http.Request) {
@@ -28,7 +28,7 @@ func PutCode(writer http.ResponseWriter, request *http.Request) {
 
 func (handler *codeHandler) createTokenCode() bool {
 	code, err := (*handler.Db).CreateOrUpdateCode(handler.ObjId)
-	handler.codeData = map[string]string{internal.CodeJsonKey: code}
+	handler.clientCode = internal.ClientCode{UserId: handler.ObjId, Code: code}
 
 	if err != nil {
 		internal.LogRequestError(err, handler.Request)

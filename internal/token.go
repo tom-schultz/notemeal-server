@@ -9,6 +9,6 @@ type Token struct {
 }
 
 type ClientToken struct {
-	Id    string
-	Token string
+	Id    string `json:"id"`
+	Token string `json:"token"`
 }

@@ -10,6 +10,7 @@ var Db Database
 
 type Database interface {
 	CreateOrUpdateCode(id string) (string, error)
+	CreateNote(n *internal.Note) error
 	CreateToken(userId string, CodeString string) (*internal.ClientToken, error)
 	DeleteNote(id string) error
 	DeleteUser(id string) error

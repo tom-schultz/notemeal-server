@@ -4,10 +4,13 @@ import (
 	"time"
 )
 
-const CodeJsonKey string = "code"
-
 type Code struct {
-	UserId     string
-	Hash       string
-	Expiration time.Time
+	UserId     string    `json:"userId"`
+	Hash       string    `json:"hash"`
+	Expiration time.Time `json:"-"`
+}
+
+type ClientCode struct {
+	UserId string `json:"userId"`
+	Code   string `json:"code"`
 }

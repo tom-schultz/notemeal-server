@@ -71,12 +71,12 @@ func TestCodeAdminPutUpdate(t *testing.T) {
 	postPutCodeExp := getCode(userId).Expiration
 	test.ExpectCompareGreater(postPutCodeExp, prePutExp)
 
-	var bodyData map[string]string
-	test.GetBodyData(resp, &bodyData)
+	clientCode := internal.ClientCode{}
+	test.GetBodyData(resp, &clientCode)
 
 	dbCode := getCode(userId)
 	test.ExpectNotEqual(dbCode, nil)
 
-	err := database.CompareHashAndString(dbCode.Hash, bodyData[internal.CodeJsonKey])
+	err := database.CompareHashAndString(dbCode.Hash, clientCode.Code)
 	test.ExpectEqual(err, nil)
 }

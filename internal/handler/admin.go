@@ -24,7 +24,7 @@ func PutCodeAdmin(writer http.ResponseWriter, request *http.Request) {
 	result := handler.getObjId() &&
 		handler.authorizeAdmin() &&
 		handler.createTokenCode() &&
-		handler.writeValueToResponse(handler.codeData)
+		handler.writeValueToResponse(handler.clientCode)
 
 	handler.endRequest(result)
 }
