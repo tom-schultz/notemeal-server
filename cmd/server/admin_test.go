@@ -32,7 +32,7 @@ func TestCodeAdminPutNew(t *testing.T) {
 	ts := test.Server()
 	defer ts.Close()
 	principalId := "admin"
-	userId := "tom"
+	userId := "mot"
 	token := test.SetupAuth(principalId)
 
 	prePutCode := getCode(userId)

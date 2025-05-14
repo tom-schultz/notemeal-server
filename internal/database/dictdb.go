@@ -183,10 +183,10 @@ func (db *dictDb) Initialize() error {
 	db.admins = []string{"admin"}
 
 	db.notes = map[string]*internal.Note{
-		//"dogs":    {Id: "dogs", Title: "Doggos", Text: "doggos are sweet", LastModified: 0, UserId: "tom"},
-		//"cats":    {Id: "cats", Title: "Cattos", Text: "meowowow", LastModified: 0, UserId: "tom"},
-		//"rabbits": {Id: "rabbits", Title: "Buns", Text: "hoppity hop, motherfuckas", LastModified: 0, UserId: "tom"},
-		//"goblins": {Id: "goblins", Title: "Gobbos", Text: "Grickle grackle", LastModified: 0, UserId: "mot"},
+		"dogs":    {Id: "dogs", Title: "Doggos", Text: "doggos are sweet", LastModified: 0, UserId: "tom"},
+		"cats":    {Id: "cats", Title: "Cattos", Text: "meowowow", LastModified: 0, UserId: "tom"},
+		"rabbits": {Id: "rabbits", Title: "Buns", Text: "hoppity hop, motherfuckas", LastModified: 0, UserId: "tom"},
+		"goblins": {Id: "goblins", Title: "Gobbos", Text: "Grickle grackle", LastModified: 0, UserId: "mot"},
 	}
 
 	db.users = map[string]*internal.User{
@@ -201,11 +201,11 @@ func (db *dictDb) Initialize() error {
 		log.Fatal("Hash error during DB initialization!")
 	}
 
-	adminHash, err := HashString("turtles")
+	codeHash, err := HashString("turtles")
 
 	db.codes = map[string]*internal.Code{
 		"expired-code": {"expired-code", expiredHash, time.Unix(0, 0)},
-		"admin":        {"admin", adminHash, time.Now().Add(time.Hour)},
+		"tom":          {"tom", codeHash, time.Now().Add(time.Hour)},
 	}
 
 	db.tokens = map[string]*internal.Token{}
