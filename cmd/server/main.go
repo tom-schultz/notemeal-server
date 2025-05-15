@@ -5,10 +5,12 @@ import (
 	"net/http"
 	"notemeal-server/internal/database"
 	"notemeal-server/internal/handler"
+	notemealModel "notemeal-server/internal/model"
 )
 
 func main() {
-	database.DictDb()
-	mux := handler.ServeMux()
+	db := database.DictDb()
+	m := notemealModel.NewModel(db)
+	mux := handler.ServeMux(m)
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }

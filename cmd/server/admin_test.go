@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"notemeal-server/internal"
-	"notemeal-server/internal/database"
 	"notemeal-server/internal/test"
 	"testing"
 	"time"
@@ -15,12 +14,12 @@ func getAdminCodeUrl(id string, baseUrl string) string {
 }
 
 func TestPutCodeAdminNotAdmin(t *testing.T) {
-	ts := test.Server()
+	ts, m := test.Server()
 	defer ts.Close()
 	principalId := "tom"
 	objId := "tom"
 	url := getAdminCodeUrl(objId, ts.URL)
-	token := test.SetupAuth(principalId)
+	token := test.SetupAuth(principalId, m)
 
 	req := test.NewReq(http.MethodPut, url, nil)
 	req.SetBasicAuth(token.Id, token.Token)
@@ -29,13 +28,13 @@ func TestPutCodeAdminNotAdmin(t *testing.T) {
 }
 
 func TestCodeAdminPutNew(t *testing.T) {
-	ts := test.Server()
+	ts, m := test.Server()
 	defer ts.Close()
 	principalId := "admin"
 	userId := "mot"
-	token := test.SetupAuth(principalId)
+	token := test.SetupAuth(principalId, m)
 
-	prePutCode := getCode(userId)
+	prePutCode := getCode(userId, m)
 	test.ExpectEqual(prePutCode, nil)
 
 	url := getAdminCodeUrl(userId, ts.URL)
@@ -44,19 +43,19 @@ func TestCodeAdminPutNew(t *testing.T) {
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 
-	postPutCode := getCode(userId)
+	postPutCode := getCode(userId, m)
 	test.ExpectNotEqual(postPutCode, nil)
 }
 
 func TestCodeAdminPutUpdate(t *testing.T) {
-	ts := test.Server()
+	ts, m := test.Server()
 	defer ts.Close()
 	principalId := "admin"
 	userId := "tom"
-	token := test.SetupAuth(principalId)
+	token := test.SetupAuth(principalId, m)
 
-	createCode(userId)
-	prePutCode := getCode(userId)
+	createCode(userId, m)
+	prePutCode := getCode(userId, m)
 	test.ExpectNotEqual(prePutCode, nil)
 	prePutExp := prePutCode.Expiration
 	// Sometimes the test runs so fast that the times are the same...
@@ -68,15 +67,15 @@ func TestCodeAdminPutUpdate(t *testing.T) {
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 
-	postPutCodeExp := getCode(userId).Expiration
+	postPutCodeExp := getCode(userId, m).Expiration
 	test.ExpectCompareGreater(postPutCodeExp, prePutExp)
 
 	clientCode := internal.ClientCode{}
 	test.GetBodyData(resp, &clientCode)
 
-	dbCode := getCode(userId)
+	dbCode := getCode(userId, m)
 	test.ExpectNotEqual(dbCode, nil)
 
-	err := database.CompareHashAndString(dbCode.Hash, clientCode.Code)
+	err := internal.CompareHashAndString(dbCode.Hash, clientCode.Code)
 	test.ExpectEqual(err, nil)
 }

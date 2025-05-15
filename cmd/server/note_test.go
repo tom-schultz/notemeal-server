@@ -5,21 +5,21 @@ import (
 	"log"
 	"net/http"
 	"notemeal-server/internal"
-	"notemeal-server/internal/database"
+	"notemeal-server/internal/model"
 	"notemeal-server/internal/test"
 	"testing"
 )
 
-func createNote(n *internal.Note) {
-	err := database.Db.CreateNote(n)
+func createNote(n *internal.Note, m model.Model) {
+	err := m.CreateNote(n)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func getNote(id string) *internal.Note {
-	note, err := database.Db.GetNote(id)
+func getNote(id string, m model.Model) *internal.Note {
+	note, err := m.GetNote(id)
 
 	if err != nil {
 		log.Fatal(err)
@@ -33,20 +33,20 @@ func getNoteUrl(id string, baseUrl string) string {
 }
 
 func TestNoteDeleteNoAuth(t *testing.T) {
-	ts := test.Server()
+	ts, _ := test.Server()
 	defer ts.Close()
 	url := getNoteUrl("dogs", ts.URL)
 	test.UnauthorizedTest("DELETE", url, nil)
 }
 
 func TestNoteDelete(t *testing.T) {
-	ts := test.Server()
+	ts, m := test.Server()
 	defer ts.Close()
 	user := "tom"
 	noteId := "dogs"
-	token := test.SetupAuth(user)
+	token := test.SetupAuth(user, m)
 
-	note := getNote(noteId)
+	note := getNote(noteId, m)
 
 	if note == nil {
 		log.Fatal("Test note does not exist!")
@@ -58,7 +58,7 @@ func TestNoteDelete(t *testing.T) {
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 
-	note = getNote(noteId)
+	note = getNote(noteId, m)
 
 	if note != nil {
 		log.Fatal("Note should be nil!")
@@ -66,18 +66,18 @@ func TestNoteDelete(t *testing.T) {
 }
 
 func TestNoteGetNoAuth(t *testing.T) {
-	ts := test.Server()
+	ts, _ := test.Server()
 	defer ts.Close()
 	url := getNoteUrl("dogs", ts.URL)
 	test.UnauthorizedTest("GET", url, nil)
 }
 
 func TestNoteGet(t *testing.T) {
-	ts := test.Server()
+	ts, m := test.Server()
 	defer ts.Close()
 	user := "tom"
 	noteId := "dogs"
-	token := test.SetupAuth(user)
+	token := test.SetupAuth(user, m)
 
 	url := fmt.Sprintf("%s/note/%s", ts.URL, noteId)
 	req := test.NewReq(http.MethodGet, url, nil)
@@ -85,17 +85,17 @@ func TestNoteGet(t *testing.T) {
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 
-	note := getNote(noteId)
+	note := getNote(noteId, m)
 	test.ExpectBody(resp, test.Serialize(note))
 }
 
 func TestNotePutCreate(t *testing.T) {
-	ts := test.Server()
+	ts, m := test.Server()
 	defer ts.Close()
 	user := "tom"
 	noteId := "wuppers"
 	postNote := &internal.Note{Id: noteId, Text: "woof woof", Title: "Puppers", UserId: user, LastModified: 0}
-	token := test.SetupAuth(user)
+	token := test.SetupAuth(user, m)
 
 	url := fmt.Sprintf("%s/note/%s", ts.URL, noteId)
 	req := test.NewReq(http.MethodPut, url, test.Serialize(postNote))
@@ -103,17 +103,17 @@ func TestNotePutCreate(t *testing.T) {
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 
-	dbNote := getNote(noteId)
+	dbNote := getNote(noteId, m)
 	test.ExpectEqual(*dbNote, *postNote)
 }
 
 func TestNotePutUpdate(t *testing.T) {
-	ts := test.Server()
+	ts, m := test.Server()
 	defer ts.Close()
 	user := "tom"
 	noteId := "dogs"
 	putNote := &internal.Note{Id: noteId, Text: "woof woof", Title: "Puppers", UserId: user, LastModified: 0}
-	token := test.SetupAuth(user)
+	token := test.SetupAuth(user, m)
 
 	url := fmt.Sprintf("%s/note/%s", ts.URL, noteId)
 	req := test.NewReq(http.MethodPut, url, test.Serialize(putNote))
@@ -121,12 +121,12 @@ func TestNotePutUpdate(t *testing.T) {
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusOK)
 
-	dbNote := getNote(noteId)
+	dbNote := getNote(noteId, m)
 	test.ExpectEqual(*dbNote, *putNote)
 }
 
 func TestNotePutNoAuth(t *testing.T) {
-	ts := test.Server()
+	ts, _ := test.Server()
 	defer ts.Close()
 	url := getNoteUrl("dogs", ts.URL)
 	test.UnauthorizedTest(http.MethodPut, url, nil)

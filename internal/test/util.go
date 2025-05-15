@@ -10,6 +10,7 @@ import (
 	"notemeal-server/internal"
 	"notemeal-server/internal/database"
 	"notemeal-server/internal/handler"
+	"notemeal-server/internal/model"
 )
 
 type Comparer[T any] interface {
@@ -87,14 +88,14 @@ func SendReq(req *http.Request) *http.Response {
 	return resp
 }
 
-func SetupAuth(user string) internal.ClientToken {
-	code, err := database.Db.CreateOrUpdateCode(user)
+func SetupAuth(user string, model model.Model) internal.ClientToken {
+	code, err := model.CreateOrUpdateCode(user)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	token, err := database.Db.CreateToken(user, code)
+	token, err := model.CreateToken(user, code)
 
 	if err != nil {
 		log.Fatal(err)
@@ -113,13 +114,14 @@ func Serialize(v any) []byte {
 	return data
 }
 
-func Server() *httptest.Server {
-	database.DictDb()
+func Server() (*httptest.Server, model.Model) {
+	db := database.DictDb()
+	m := model.NewModel(db)
 
-	mux := handler.ServeMux()
+	mux := handler.ServeMux(m)
 	ts := httptest.NewServer(mux)
 
-	return ts
+	return ts, m
 }
 
 func UnauthorizedTest(method string, url string, body []byte) {

@@ -2,20 +2,21 @@ package handler
 
 import (
 	"net/http"
+	notemealModel "notemeal-server/internal/model"
 )
 
-func ServeMux() *http.ServeMux {
+func ServeMux(m notemealModel.Model) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("PUT /admin/user/{id}/code", PutCodeAdmin)
-	mux.HandleFunc("DELETE /note/{id}", DeleteNote)
-	mux.HandleFunc("GET /note/{id}", GetNote)
-	mux.HandleFunc("PUT /note/{id}", PutNote)
-	mux.HandleFunc("GET /notes", GetNotes)
-	mux.HandleFunc("DELETE /user/{id}", DeleteUser)
-	mux.HandleFunc("GET /user/{id}", GetUser)
-	mux.HandleFunc("PUT /user/{id}", PutUser)
-	mux.HandleFunc("PUT /user/{id}/code", PutCode)
-	mux.HandleFunc("POST /user/{id}/token", PostToken)
+	mux.Handle("PUT /admin/user/{id}/code", Handler{m, PutCodeAdmin})
+	mux.Handle("DELETE /note/{id}", Handler{m, DeleteNote})
+	mux.Handle("GET /note/{id}", Handler{m, GetNote})
+	mux.Handle("PUT /note/{id}", Handler{m, PutNote})
+	mux.Handle("GET /notes", Handler{m, GetNotes})
+	mux.Handle("DELETE /user/{id}", Handler{m, DeleteUser})
+	mux.Handle("GET /user/{id}", Handler{m, GetUser})
+	mux.Handle("PUT /user/{id}", Handler{m, PutUser})
+	mux.Handle("PUT /user/{id}/code", Handler{m, PutCode})
+	mux.Handle("POST /user/{id}/token", Handler{m, PostToken})
 
 	return mux
 }

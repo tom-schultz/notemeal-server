@@ -5,13 +5,13 @@ import (
 	"log"
 	"net/http"
 	"notemeal-server/internal"
-	"notemeal-server/internal/database"
+	"notemeal-server/internal/model"
 	"notemeal-server/internal/test"
 	"testing"
 )
 
-func getToken(id string) *internal.Token {
-	token, err := database.Db.GetToken(id)
+func getToken(id string, m model.Model) *internal.Token {
+	token, err := m.GetToken(id)
 
 	if err != nil {
 		log.Fatal(err)
@@ -25,11 +25,11 @@ func getTokenUrl(id string, baseUrl string) string {
 }
 
 func TestTokenPost(t *testing.T) {
-	ts := test.Server()
+	ts, m := test.Server()
 	defer ts.Close()
 	userId := "tom"
 	url := getTokenUrl(userId, ts.URL)
-	code := createCode(userId)
+	code := createCode(userId, m)
 	clientCode := internal.ClientCode{UserId: userId, Code: code}
 	reqBody := test.Serialize(clientCode)
 
@@ -39,14 +39,14 @@ func TestTokenPost(t *testing.T) {
 
 	var clientToken internal.ClientToken
 	test.GetBodyData(resp, &clientToken)
-	dbToken := getToken(clientToken.Id)
+	dbToken := getToken(clientToken.Id, m)
 	test.ExpectNotEqual(dbToken, nil)
-	err := database.CompareHashAndString(dbToken.Hash, clientToken.Token)
+	err := internal.CompareHashAndString(dbToken.Hash, clientToken.Token)
 	test.ExpectEqual(err, nil)
 }
 
 func TestTokenPostFakeCode(t *testing.T) {
-	ts := test.Server()
+	ts, _ := test.Server()
 	defer ts.Close()
 	userId := "tom"
 	url := getTokenUrl(userId, ts.URL)
@@ -60,11 +60,11 @@ func TestTokenPostFakeCode(t *testing.T) {
 }
 
 func TestTokenPostWrongCode(t *testing.T) {
-	ts := test.Server()
+	ts, m := test.Server()
 	defer ts.Close()
 	userId := "tom"
 	url := getTokenUrl(userId, ts.URL)
-	createCode(userId)
+	createCode(userId, m)
 	wrongCode := "mumbojumbo"
 	clientCode := internal.ClientCode{UserId: userId, Code: wrongCode}
 	reqBody := test.Serialize(clientCode)
@@ -75,7 +75,7 @@ func TestTokenPostWrongCode(t *testing.T) {
 }
 
 func TestTokenPostExpiredCode(t *testing.T) {
-	ts := test.Server()
+	ts, _ := test.Server()
 	defer ts.Close()
 	userId := "expired-code"
 	url := getTokenUrl(userId, ts.URL)

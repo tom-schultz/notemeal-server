@@ -6,27 +6,27 @@ import (
 	"io"
 	"net/http"
 	"notemeal-server/internal"
-	"notemeal-server/internal/database"
+	"notemeal-server/internal/model"
 )
 
 const objIdKey string = "id"
 
 type baseHandler struct {
-	Db          *database.Database
-	ObjId       string
-	PrincipalId string
-	Request     *http.Request
-	RequestBody []byte
-	StatusCode  int
-	Writer      http.ResponseWriter
+	model       model.Model
+	objId       string
+	principalId string
+	request     *http.Request
+	requestBody []byte
+	statusCode  int
+	writer      http.ResponseWriter
 }
 
 func (handler *baseHandler) authorizeOwnsObj() bool {
-	authorized := handler.PrincipalId == handler.ObjId
+	authorized := handler.principalId == handler.objId
 
 	if !authorized {
-		msg := fmt.Sprintf("%s is not authorized for operations on %s!\n", handler.PrincipalId, handler.ObjId)
-		internal.LogRequestMsg(msg, handler.Request)
+		msg := fmt.Sprintf("%s is not authorized for operations on %s!\n", handler.principalId, handler.objId)
+		internal.LogRequestMsg(msg, handler.request)
 		handler.setStatus(http.StatusUnauthorized)
 	}
 
@@ -34,53 +34,53 @@ func (handler *baseHandler) authorizeOwnsObj() bool {
 }
 
 func (handler *baseHandler) endRequest(success bool) {
-	internal.LogRequestEnd(handler.Request, handler.StatusCode)
+	internal.LogRequestEnd(handler.request, handler.statusCode)
 }
 
 func (handler *baseHandler) authenticate() bool {
 	var ok bool
 	var tokenString string
-	tokenId, tokenString, ok := handler.Request.BasicAuth()
+	tokenId, tokenString, ok := handler.request.BasicAuth()
 
 	if !ok {
-		internal.LogRequestMsg("Failed to find auth!", handler.Request)
+		internal.LogRequestMsg("Failed to find auth!", handler.request)
 		handler.setStatus(http.StatusUnauthorized)
 		return false
 	}
 
-	principalToken, err := (*handler.Db).GetToken(tokenId)
+	principalToken, err := handler.model.GetToken(tokenId)
 
 	if err != nil {
-		internal.LogRequestError(err, handler.Request)
+		internal.LogRequestError(err, handler.request)
 		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
 
 	if principalToken == nil {
-		internal.LogRequestMsg("Failed to find token in database!", handler.Request)
+		internal.LogRequestMsg("Failed to find token in database!", handler.request)
 		handler.setStatus(http.StatusUnauthorized)
 		return false
 	}
 
-	err = database.CompareHashAndString(principalToken.Hash, tokenString)
+	err = internal.CompareHashAndString(principalToken.Hash, tokenString)
 
 	if err != nil {
-		internal.LogRequestMsg("Invalid token!", handler.Request)
+		internal.LogRequestMsg("Invalid token!", handler.request)
 		handler.setStatus(http.StatusUnauthorized)
 		return false
 	}
 
-	handler.PrincipalId = principalToken.UserId
+	handler.principalId = principalToken.UserId
 	return true
 }
 
 func (handler *baseHandler) getBodyString() bool {
 	var err error
-	handler.RequestBody, err = io.ReadAll(handler.Request.Body)
+	handler.requestBody, err = io.ReadAll(handler.request.Body)
 
 	if err != nil {
-		internal.LogRequestError(err, handler.Request)
-		internal.LogRequestMsg("Could not retrieve body string from Request!", handler.Request)
+		internal.LogRequestError(err, handler.request)
+		internal.LogRequestMsg("Could not retrieve body string from request!", handler.request)
 		handler.setStatus(http.StatusBadRequest)
 		return false
 	}
@@ -89,11 +89,11 @@ func (handler *baseHandler) getBodyString() bool {
 }
 
 func (handler *baseHandler) getObjId() bool {
-	handler.ObjId = handler.Request.PathValue(objIdKey)
+	handler.objId = handler.request.PathValue(objIdKey)
 
-	if handler.ObjId == "" {
+	if handler.objId == "" {
 		err := Error{"Could not get nodeId from path!"}
-		internal.LogRequestError(err, handler.Request)
+		internal.LogRequestError(err, handler.request)
 		handler.setStatus(http.StatusBadRequest)
 		return false
 	}
@@ -102,24 +102,24 @@ func (handler *baseHandler) getObjId() bool {
 }
 
 func (handler *baseHandler) setStatus(status int) {
-	handler.StatusCode = status
-	handler.Writer.WriteHeader(status)
+	handler.statusCode = status
+	handler.writer.WriteHeader(status)
 }
 
 func (handler *baseHandler) writeValueToResponse(value any) bool {
 	body, err := json.Marshal(value)
 
 	if err != nil {
-		internal.LogRequestError(err, handler.Request)
+		internal.LogRequestError(err, handler.request)
 		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
 
-	handler.Writer.Header().Add("Content-Type", "application/json")
-	_, err = handler.Writer.Write(body)
+	handler.writer.Header().Add("Content-Type", "application/json")
+	_, err = handler.writer.Write(body)
 
 	if err != nil {
-		internal.LogRequestError(err, handler.Request)
+		internal.LogRequestError(err, handler.request)
 		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}

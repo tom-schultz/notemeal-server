@@ -1,140 +1,61 @@
 package database
 
 import (
-	"crypto/rand"
 	"log"
-	"log/slog"
 	"maps"
 	"notemeal-server/internal"
-	"slices"
 	"time"
 )
 
 type dictDb struct {
-	initialized bool
 	admins      []string
 	notes       map[string]*internal.Note
 	tokens      map[string]*internal.Token
 	codes       map[string]*internal.Code
 	users       map[string]*internal.User
+	initialized bool
 }
 
-func DictDb() {
-	Db = &dictDb{}
+func DictDb() Database {
+	db := &dictDb{}
 
-	if err := Db.Initialize(); err != nil {
+	if err := db.initialize(); err != nil {
 		log.Fatal(err)
 	}
+
+	return db
 }
 
-func (db *dictDb) CreateOrUpdateCode(userId string) (string, error) {
+func (db *dictDb) DeleteCode(userId string) error {
 	if !db.initialized {
-		return "", DbError{"Database not initialized!"}
+		return internal.Error{"Database not initialized!"}
 	}
-
-	expiration := time.Now().Add(time.Hour)
-	code := CreateSecureString()
-	hash, err := HashString(code)
-
-	if err != nil {
-		return "", err
-	}
-
-	db.codes[userId] = &internal.Code{
-		UserId:     userId,
-		Hash:       hash,
-		Expiration: expiration,
-	}
-
-	return code, nil
-}
-
-func (db *dictDb) CreateNote(newNote *internal.Note) error {
-	if !db.initialized {
-		return DbError{"Database not initialized!"}
-	}
-
-	_, ok := db.notes[newNote.Id]
-
-	if ok {
-		return DbError{"Note already exists!"}
-	}
-
-	db.notes[newNote.Id] = newNote
-	return nil
-}
-
-func (db *dictDb) CreateToken(userId string, codeString string) (*internal.ClientToken, error) {
-	if !db.initialized {
-		return nil, DbError{"Database not initialized!"}
-	}
-
-	code := db.codes[userId]
-
-	if code == nil {
-		return nil, nil
-	}
-
-	err := CompareHashAndString(code.Hash, codeString)
-
-	if err != nil {
-		return nil, nil
-	}
-
-	if code.Expiration.Before(time.Now()) {
-		slog.Error("Cannot create tokenStr with expired code!", "user", userId)
-		return nil, nil
-	}
-
-	tokenStr := CreateSecureString()
-	tokenHash, err := HashString(tokenStr)
-
-	if err != nil {
-		return nil, err
-	}
-
-	id := rand.Text()
-	_, ok := db.tokens[id]
-
-	for ok {
-		id = rand.Text()
-		_, ok = db.tokens[id]
-	}
-
-	db.tokens[id] = &internal.Token{
-		Id:     id,
-		Hash:   tokenHash,
-		UserId: userId}
-
-	clientToken := &internal.ClientToken{
-		Id:    id,
-		Token: tokenStr}
 
 	delete(db.codes, userId)
-	return clientToken, nil
-}
-
-func (db *dictDb) DeleteUser(id string) error {
-	if !db.initialized {
-		return DbError{"Database not initialized!"}
-	}
-
-	delete(db.users, id)
 	return nil
 }
 
 func (db *dictDb) DeleteNote(id string) error {
 	if !db.initialized {
-		return DbError{"Database not initialized!"}
+		return internal.Error{"Database not initialized!"}
 	}
 
 	delete(db.notes, id)
 	return nil
 }
 
+func (db *dictDb) DeleteUser(id string) error {
+	if !db.initialized {
+		return internal.Error{"Database not initialized!"}
+	}
+
+	delete(db.users, id)
+	return nil
+}
+
 func (db *dictDb) GetCode(userId string) (*internal.Code, error) {
 	if !db.initialized {
-		return nil, DbError{"Database not initialized!"}
+		return nil, internal.Error{"Database not initialized!"}
 	}
 
 	return db.codes[userId], nil
@@ -142,44 +63,45 @@ func (db *dictDb) GetCode(userId string) (*internal.Code, error) {
 
 func (db *dictDb) GetNote(id string) (*internal.Note, error) {
 	if !db.initialized {
-		return nil, DbError{"Database not initialized!"}
+		return nil, internal.Error{"Database not initialized!"}
 	}
 
 	return db.notes[id], nil
 }
 
-func (db *dictDb) GetToken(tokenId string) (*internal.Token, error) {
+func (db *dictDb) GetNotesByUser(userId string) ([]*internal.Note, error) {
 	if !db.initialized {
-		return nil, DbError{"Database not initialized!"}
+		return nil, internal.Error{"Database not initialized!"}
 	}
 
-	token, _ := db.tokens[tokenId]
-	return token, nil
+	data := make([]*internal.Note, 0)
+
+	for key := range maps.Keys(db.notes) {
+		if db.notes[key].UserId == userId {
+			data = append(data, db.notes[key])
+		}
+	}
+
+	return data, nil
+}
+
+func (db *dictDb) GetToken(id string) (*internal.Token, error) {
+	if !db.initialized {
+		return nil, internal.Error{"Database not initialized!"}
+	}
+
+	return db.tokens[id], nil
 }
 
 func (db *dictDb) GetUser(id string) (*internal.User, error) {
 	if !db.initialized {
-		return nil, DbError{"Database not initialized!"}
+		return nil, internal.Error{"Database not initialized!"}
 	}
 
 	return db.users[id], nil
 }
 
-func (db *dictDb) IsAdmin(userId string) (bool, error) {
-	return slices.Contains(db.admins, userId), nil
-}
-
-func (db *dictDb) IsNoteOwner(noteId string, principalId string) (bool, error) {
-	n, ok := db.notes[noteId]
-
-	if !ok {
-		return false, DbError{"note does not exist, cannot be owner!!"}
-	}
-
-	return n.UserId == principalId, nil
-}
-
-func (db *dictDb) Initialize() error {
+func (db *dictDb) initialize() error {
 	db.admins = []string{"admin"}
 
 	db.notes = map[string]*internal.Note{
@@ -193,15 +115,19 @@ func (db *dictDb) Initialize() error {
 		"tom":          {Id: "tom", Email: "fake@fake.com"},
 		"mot":          {Id: "mot", Email: "ekaf@fake.com"},
 		"expired-code": {Id: "expired-code", Email: "expired@fake.com"},
-		"admin":        {Id: "admin", Email: "fakeadmin@fake.com"},
+		"admin":        {Id: "admin", Email: "fakeadmin@fake.com", IsAdmin: true},
 	}
-	expiredHash, err := HashString("expired")
+	expiredHash, err := internal.HashString("expired")
 
 	if err != nil {
-		log.Fatal("Hash error during DB initialization!")
+		return nil
 	}
 
-	codeHash, err := HashString("turtles")
+	codeHash, err := internal.HashString("turtles")
+
+	if err != nil {
+		return nil
+	}
 
 	db.codes = map[string]*internal.Code{
 		"expired-code": {"expired-code", expiredHash, time.Unix(0, 0)},
@@ -209,56 +135,33 @@ func (db *dictDb) Initialize() error {
 	}
 
 	db.tokens = map[string]*internal.Token{}
-
 	db.initialized = true
 	return nil
 }
 
-func (db *dictDb) ListLastModified(userId string) (map[string]int, error) {
+func (db *dictDb) StoreCode(code *internal.Code) error {
 	if !db.initialized {
-		return nil, DbError{"Database not initialized!"}
+		return internal.Error{"Database not initialized!"}
 	}
 
-	data := make(map[string]int)
-
-	for key := range maps.Keys(db.notes) {
-		if db.notes[key].UserId == userId {
-			data[key] = db.notes[key].LastModified
-		}
-	}
-
-	return data, nil
-}
-
-func (db *dictDb) UpdateNote(newNote *internal.Note) error {
-	if !db.initialized {
-		return DbError{"Database not initialized!"}
-	}
-
-	oldNote, ok := db.notes[newNote.Id]
-
-	if !ok {
-		return DbError{"Could not find oldNote: " + newNote.Id}
-	}
-
-	oldNote.LastModified = newNote.LastModified
-	oldNote.Text = newNote.Text
-	oldNote.Title = newNote.Title
+	db.codes[code.UserId] = code
 	return nil
 }
 
-func (db *dictDb) SetUser(u *internal.User) error {
+func (db *dictDb) StoreNote(note *internal.Note) error {
 	if !db.initialized {
-		return DbError{"Database not initialized!"}
+		return internal.Error{"Database not initialized!"}
 	}
 
-	usr, ok := db.users[u.Id]
+	db.notes[note.Id] = note
+	return nil
+}
 
-	if ok {
-		usr.Email = u.Email
-	} else {
-		return DbError{"user not found in database!"}
+func (db *dictDb) StoreToken(token *internal.Token) error {
+	if !db.initialized {
+		return internal.Error{"Database not initialized!"}
 	}
 
+	db.tokens[token.Id] = token
 	return nil
 }

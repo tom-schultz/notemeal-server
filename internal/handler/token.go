@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"notemeal-server/internal"
-	"notemeal-server/internal/database"
+	"notemeal-server/internal/model"
 )
 
 type tokenHandler struct {
@@ -13,8 +13,8 @@ type tokenHandler struct {
 	clientToken *internal.ClientToken
 }
 
-func PostToken(writer http.ResponseWriter, request *http.Request) {
-	handler := startTokenRequest(writer, request, &database.Db)
+func PostToken(m model.Model, writer http.ResponseWriter, request *http.Request) {
+	handler := startTokenRequest(m, writer, request)
 
 	result := handler.getObjId() &&
 		handler.getBodyString() &&
@@ -27,16 +27,16 @@ func PostToken(writer http.ResponseWriter, request *http.Request) {
 
 func (handler *tokenHandler) createToken() bool {
 	var err error
-	handler.clientToken, err = (*handler.Db).CreateToken(handler.ObjId, handler.code)
+	handler.clientToken, err = handler.model.CreateToken(handler.objId, handler.code)
 
 	if err != nil {
-		internal.LogRequestError(err, handler.Request)
+		internal.LogRequestError(err, handler.request)
 		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
 
 	if handler.clientToken == nil {
-		internal.LogRequestMsg("Invalid code!", handler.Request)
+		internal.LogRequestMsg("Invalid code!", handler.request)
 		handler.setStatus(http.StatusUnauthorized)
 		return false
 	}
@@ -46,11 +46,11 @@ func (handler *tokenHandler) createToken() bool {
 
 func (handler *tokenHandler) getCodeFromBody() bool {
 	clientCode := internal.ClientCode{}
-	err := json.Unmarshal(handler.RequestBody, &clientCode)
+	err := json.Unmarshal(handler.requestBody, &clientCode)
 
 	if err != nil {
-		internal.LogRequestError(err, handler.Request)
-		internal.LogRequestMsg("Could not deserialize token code from body string!\n", handler.Request)
+		internal.LogRequestError(err, handler.request)
+		internal.LogRequestMsg("Could not deserialize token code from body string!\n", handler.request)
 		handler.setStatus(http.StatusBadRequest)
 		return false
 	}
@@ -59,14 +59,14 @@ func (handler *tokenHandler) getCodeFromBody() bool {
 	return true
 }
 
-func startTokenRequest(writer http.ResponseWriter, request *http.Request, db *database.Database) *tokenHandler {
+func startTokenRequest(m model.Model, writer http.ResponseWriter, request *http.Request) *tokenHandler {
 	internal.LogRequestStart(request)
 
 	return &tokenHandler{
 		baseHandler: baseHandler{
-			Db:      db,
-			Request: request,
-			Writer:  writer,
+			model:   m,
+			request: request,
+			writer:  writer,
 		},
 	}
 }

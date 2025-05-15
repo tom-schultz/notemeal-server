@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"notemeal-server/internal"
-	"notemeal-server/internal/database"
+	"notemeal-server/internal/model"
 )
 
 type noteHandler struct {
@@ -14,8 +14,8 @@ type noteHandler struct {
 	existingNote bool
 }
 
-func DeleteNote(writer http.ResponseWriter, request *http.Request) {
-	handler, authenticated := startNoteRequest(writer, request, &database.Db)
+func DeleteNote(m model.Model, writer http.ResponseWriter, request *http.Request) {
+	handler, authenticated := startNoteRequest(m, writer, request)
 
 	if !authenticated {
 		handler.endRequest(false)
@@ -29,8 +29,8 @@ func DeleteNote(writer http.ResponseWriter, request *http.Request) {
 	handler.endRequest(result)
 }
 
-func GetNote(writer http.ResponseWriter, request *http.Request) {
-	handler, authenticated := startNoteRequest(writer, request, &database.Db)
+func GetNote(m model.Model, writer http.ResponseWriter, request *http.Request) {
+	handler, authenticated := startNoteRequest(m, writer, request)
 
 	if !authenticated {
 		handler.endRequest(false)
@@ -45,8 +45,8 @@ func GetNote(writer http.ResponseWriter, request *http.Request) {
 	handler.endRequest(result)
 }
 
-func PutNote(writer http.ResponseWriter, request *http.Request) {
-	handler, authenticated := startNoteRequest(writer, request, &database.Db)
+func PutNote(m model.Model, writer http.ResponseWriter, request *http.Request) {
+	handler, authenticated := startNoteRequest(m, writer, request)
 
 	if !authenticated {
 		handler.endRequest(false)
@@ -62,25 +62,25 @@ func PutNote(writer http.ResponseWriter, request *http.Request) {
 	handler.endRequest(result)
 }
 
-func GetNotes(writer http.ResponseWriter, request *http.Request) {
-	handler, authenticated := startNoteRequest(writer, request, &database.Db)
+func GetNotes(m model.Model, writer http.ResponseWriter, request *http.Request) {
+	handler, authenticated := startNoteRequest(m, writer, request)
 
 	if !authenticated {
 		handler.endRequest(false)
 		return
 	}
 
-	result := handler.listNotesFromDb(handler.PrincipalId) &&
+	result := handler.listNotesFromDb(handler.principalId) &&
 		handler.writeValueToResponse(handler.noteList)
 
 	handler.endRequest(result)
 }
 
 func (handler *noteHandler) authorizePrincipal() bool {
-	oldNote, err := (*handler.Db).GetNote(handler.ObjId)
+	oldNote, err := handler.model.GetNote(handler.objId)
 
 	if err != nil {
-		internal.LogRequestError(err, handler.Request)
+		internal.LogRequestError(err, handler.request)
 		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
@@ -88,16 +88,16 @@ func (handler *noteHandler) authorizePrincipal() bool {
 	handler.existingNote = oldNote != nil
 
 	if handler.existingNote {
-		isOwner, err := (*handler.Db).IsNoteOwner(handler.ObjId, handler.PrincipalId)
+		isOwner, err := handler.model.IsNoteOwner(handler.objId, handler.principalId)
 
 		if err != nil {
-			internal.LogRequestError(err, handler.Request)
+			internal.LogRequestError(err, handler.request)
 			handler.setStatus(http.StatusInternalServerError)
 			return false
 		}
 
 		if !isOwner {
-			internal.LogRequestMsg("Principal is not authorized!", handler.Request)
+			internal.LogRequestMsg("Principal is not authorized!", handler.request)
 			handler.setStatus(http.StatusUnauthorized)
 			return false
 		}
@@ -107,10 +107,10 @@ func (handler *noteHandler) authorizePrincipal() bool {
 }
 
 func (handler *noteHandler) deleteNote() bool {
-	err := (*handler.Db).DeleteNote(handler.ObjId)
+	err := handler.model.DeleteNote(handler.objId)
 
 	if err != nil {
-		internal.LogRequestError(err, handler.Request)
+		internal.LogRequestError(err, handler.request)
 		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
@@ -120,25 +120,25 @@ func (handler *noteHandler) deleteNote() bool {
 
 func (handler *noteHandler) getNoteFromBody() bool {
 	handler.note = new(internal.Note)
-	err := json.Unmarshal(handler.RequestBody, handler.note)
+	err := json.Unmarshal(handler.requestBody, handler.note)
 
 	if err != nil {
-		internal.LogRequestError(err, handler.Request)
-		internal.LogRequestMsg("Could not deserialize note from body string!\n", handler.Request)
+		internal.LogRequestError(err, handler.request)
+		internal.LogRequestMsg("Could not deserialize note from body string!\n", handler.request)
 		handler.setStatus(http.StatusBadRequest)
 		return false
 	}
 
-	handler.note.Id = handler.ObjId
+	handler.note.Id = handler.objId
 	return true
 }
 
 func (handler *noteHandler) getNoteFromDb() bool {
 	var err error
-	handler.note, err = (*handler.Db).GetNote(handler.ObjId)
+	handler.note, err = handler.model.GetNote(handler.objId)
 
 	if err != nil {
-		internal.LogRequestError(err, handler.Request)
+		internal.LogRequestError(err, handler.request)
 		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
@@ -153,10 +153,10 @@ func (handler *noteHandler) getNoteFromDb() bool {
 
 func (handler *noteHandler) listNotesFromDb(userId string) bool {
 	var err error
-	handler.noteList, err = (*handler.Db).ListLastModified(userId)
+	handler.noteList, err = handler.model.ListLastModified(userId)
 
 	if err != nil {
-		internal.LogRequestError(err, handler.Request)
+		internal.LogRequestError(err, handler.request)
 		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
@@ -164,14 +164,14 @@ func (handler *noteHandler) listNotesFromDb(userId string) bool {
 	return true
 }
 
-func startNoteRequest(writer http.ResponseWriter, request *http.Request, db *database.Database) (*noteHandler, bool) {
+func startNoteRequest(model model.Model, writer http.ResponseWriter, request *http.Request) (*noteHandler, bool) {
 	internal.LogRequestStart(request)
 
 	handler := &noteHandler{
 		baseHandler: baseHandler{
-			Db:      db,
-			Request: request,
-			Writer:  writer,
+			model:   model,
+			request: request,
+			writer:  writer,
 		},
 	}
 
@@ -180,23 +180,23 @@ func startNoteRequest(writer http.ResponseWriter, request *http.Request, db *dat
 }
 
 func (handler *noteHandler) updateNoteInDb() bool {
-	if handler.ObjId != handler.note.Id {
-		internal.LogRequestMsg("Path objId does not match body objId!", handler.Request)
+	if handler.objId != handler.note.Id {
+		internal.LogRequestMsg("Path objId does not match body objId!", handler.request)
 		handler.setStatus(http.StatusBadRequest)
 		return false
 	}
 
 	var err error
-	handler.note.UserId = handler.PrincipalId
+	handler.note.UserId = handler.principalId
 
 	if handler.existingNote {
-		err = (*handler.Db).UpdateNote(handler.note)
+		err = handler.model.UpdateNote(handler.note)
 	} else {
-		err = (*handler.Db).CreateNote(handler.note)
+		err = handler.model.CreateNote(handler.note)
 	}
 
 	if err != nil {
-		internal.LogRequestError(err, handler.Request)
+		internal.LogRequestError(err, handler.request)
 		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}

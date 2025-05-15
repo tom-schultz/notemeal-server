@@ -3,7 +3,7 @@ package handler
 import (
 	"net/http"
 	"notemeal-server/internal"
-	"notemeal-server/internal/database"
+	"notemeal-server/internal/model"
 )
 
 type codeHandler struct {
@@ -11,8 +11,8 @@ type codeHandler struct {
 	clientCode internal.ClientCode
 }
 
-func PutCode(writer http.ResponseWriter, request *http.Request) {
-	handler, authenticated := startCodeRequest(writer, request, &database.Db)
+func PutCode(m model.Model, writer http.ResponseWriter, request *http.Request) {
+	handler, authenticated := startCodeRequest(m, writer, request)
 
 	if !authenticated {
 		handler.endRequest(false)
@@ -27,11 +27,11 @@ func PutCode(writer http.ResponseWriter, request *http.Request) {
 }
 
 func (handler *codeHandler) createTokenCode() bool {
-	code, err := (*handler.Db).CreateOrUpdateCode(handler.ObjId)
-	handler.clientCode = internal.ClientCode{UserId: handler.ObjId, Code: code}
+	code, err := handler.model.CreateOrUpdateCode(handler.objId)
+	handler.clientCode = internal.ClientCode{UserId: handler.objId, Code: code}
 
 	if err != nil {
-		internal.LogRequestError(err, handler.Request)
+		internal.LogRequestError(err, handler.request)
 		handler.setStatus(http.StatusInternalServerError)
 		return false
 	}
@@ -39,14 +39,14 @@ func (handler *codeHandler) createTokenCode() bool {
 	return true
 }
 
-func startCodeRequest(writer http.ResponseWriter, request *http.Request, db *database.Database) (*codeHandler, bool) {
+func startCodeRequest(m model.Model, writer http.ResponseWriter, request *http.Request) (*codeHandler, bool) {
 	internal.LogRequestStart(request)
 
 	handler := &codeHandler{
 		baseHandler: baseHandler{
-			Db:      db,
-			Request: request,
-			Writer:  writer,
+			model:   m,
+			request: request,
+			writer:  writer,
 		},
 	}
 

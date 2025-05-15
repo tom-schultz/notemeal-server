@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"notemeal-server/internal"
-	"notemeal-server/internal/database"
+	"notemeal-server/internal/model"
 )
 
 type adminHandler struct {
@@ -13,8 +13,8 @@ type adminHandler struct {
 	token string
 }
 
-func PutCodeAdmin(writer http.ResponseWriter, request *http.Request) {
-	handler, authenticated := startAdminRequest(writer, request, &database.Db)
+func PutCodeAdmin(model model.Model, writer http.ResponseWriter, request *http.Request) {
+	handler, authenticated := startAdminRequest(model, writer, request)
 
 	if !authenticated {
 		handler.endRequest(false)
@@ -30,31 +30,31 @@ func PutCodeAdmin(writer http.ResponseWriter, request *http.Request) {
 }
 
 func (handler *adminHandler) authorizeAdmin() bool {
-	authorized, err := (*handler.Db).IsAdmin(handler.PrincipalId)
+	authorized, err := handler.model.IsAdmin(handler.principalId)
 
 	if err != nil {
-		internal.LogRequestError(err, handler.Request)
+		internal.LogRequestError(err, handler.request)
 		handler.setStatus(http.StatusInternalServerError)
 	}
 
 	if !authorized {
-		msg := fmt.Sprintf("%s is not an admin!\n", handler.PrincipalId)
-		internal.LogRequestMsg(msg, handler.Request)
+		msg := fmt.Sprintf("%s is not an admin!\n", handler.principalId)
+		internal.LogRequestMsg(msg, handler.request)
 		handler.setStatus(http.StatusUnauthorized)
 	}
 
 	return authorized
 }
 
-func startAdminRequest(writer http.ResponseWriter, request *http.Request, db *database.Database) (*adminHandler, bool) {
+func startAdminRequest(model model.Model, writer http.ResponseWriter, request *http.Request) (*adminHandler, bool) {
 	internal.LogRequestStart(request)
 
 	handler := &adminHandler{
 		codeHandler: codeHandler{
 			baseHandler: baseHandler{
-				Db:      db,
-				Request: request,
-				Writer:  writer,
+				model:   model,
+				request: request,
+				writer:  writer,
 			}},
 	}
 
