@@ -62,9 +62,7 @@ func (handler *baseHandler) authenticate() bool {
 		return false
 	}
 
-	err = internal.CompareHashAndString(principalToken.Hash, tokenString)
-
-	if err != nil {
+	if !internal.CompareHashAndString(principalToken.Hash, tokenString) {
 		internal.LogRequestMsg("Invalid token!", handler.request)
 		handler.setStatus(http.StatusUnauthorized)
 		return false

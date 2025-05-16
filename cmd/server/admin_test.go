@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func getAdminCodeUrl(id string, baseUrl string) string {
+func buildAdminCodeUrl(id string, baseUrl string) string {
 	return fmt.Sprintf("%s/admin/user/%s/code", baseUrl, id)
 }
 
@@ -18,7 +18,7 @@ func TestPutCodeAdminNotAdmin(t *testing.T) {
 	defer ts.Close()
 	principalId := "tom"
 	objId := "tom"
-	url := getAdminCodeUrl(objId, ts.URL)
+	url := buildAdminCodeUrl(objId, ts.URL)
 	token := test.SetupAuth(principalId, m)
 
 	req := test.NewReq(http.MethodPut, url, nil)
@@ -37,7 +37,7 @@ func TestCodeAdminPutNew(t *testing.T) {
 	prePutCode := getCode(userId, m)
 	test.ExpectEqual(prePutCode, nil)
 
-	url := getAdminCodeUrl(userId, ts.URL)
+	url := buildAdminCodeUrl(userId, ts.URL)
 	req := test.NewReq(http.MethodPut, url, nil)
 	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
@@ -61,7 +61,7 @@ func TestCodeAdminPutUpdate(t *testing.T) {
 	// Sometimes the test runs so fast that the times are the same...
 	time.Sleep(2 * time.Nanosecond)
 
-	url := getAdminCodeUrl(userId, ts.URL)
+	url := buildAdminCodeUrl(userId, ts.URL)
 	req := test.NewReq(http.MethodPut, url, nil)
 	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
@@ -76,6 +76,6 @@ func TestCodeAdminPutUpdate(t *testing.T) {
 	dbCode := getCode(userId, m)
 	test.ExpectNotEqual(dbCode, nil)
 
-	err := internal.CompareHashAndString(dbCode.Hash, clientCode.Code)
-	test.ExpectEqual(err, nil)
+	valid := internal.CompareHashAndString(dbCode.Hash, clientCode.Code)
+	test.ExpectEqual(valid, true)
 }

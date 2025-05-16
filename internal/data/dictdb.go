@@ -1,4 +1,4 @@
-package database
+package data
 
 import (
 	"log"
@@ -16,7 +16,7 @@ type dictDb struct {
 	initialized bool
 }
 
-func DictDb() Database {
+func DictDb() Datasource {
 	db := &dictDb{}
 
 	if err := db.initialize(); err != nil {
@@ -28,7 +28,7 @@ func DictDb() Database {
 
 func (db *dictDb) DeleteCode(userId string) error {
 	if !db.initialized {
-		return internal.Error{"Database not initialized!"}
+		return internal.Error{"Datasource not initialized!"}
 	}
 
 	delete(db.codes, userId)
@@ -37,7 +37,7 @@ func (db *dictDb) DeleteCode(userId string) error {
 
 func (db *dictDb) DeleteNote(id string) error {
 	if !db.initialized {
-		return internal.Error{"Database not initialized!"}
+		return internal.Error{"Datasource not initialized!"}
 	}
 
 	delete(db.notes, id)
@@ -46,7 +46,7 @@ func (db *dictDb) DeleteNote(id string) error {
 
 func (db *dictDb) DeleteUser(id string) error {
 	if !db.initialized {
-		return internal.Error{"Database not initialized!"}
+		return internal.Error{"Datasource not initialized!"}
 	}
 
 	delete(db.users, id)
@@ -55,7 +55,7 @@ func (db *dictDb) DeleteUser(id string) error {
 
 func (db *dictDb) GetCode(userId string) (*internal.Code, error) {
 	if !db.initialized {
-		return nil, internal.Error{"Database not initialized!"}
+		return nil, internal.Error{"Datasource not initialized!"}
 	}
 
 	return db.codes[userId], nil
@@ -63,7 +63,7 @@ func (db *dictDb) GetCode(userId string) (*internal.Code, error) {
 
 func (db *dictDb) GetNote(id string) (*internal.Note, error) {
 	if !db.initialized {
-		return nil, internal.Error{"Database not initialized!"}
+		return nil, internal.Error{"Datasource not initialized!"}
 	}
 
 	return db.notes[id], nil
@@ -71,7 +71,7 @@ func (db *dictDb) GetNote(id string) (*internal.Note, error) {
 
 func (db *dictDb) GetNotesByUser(userId string) ([]*internal.Note, error) {
 	if !db.initialized {
-		return nil, internal.Error{"Database not initialized!"}
+		return nil, internal.Error{"Datasource not initialized!"}
 	}
 
 	data := make([]*internal.Note, 0)
@@ -87,7 +87,7 @@ func (db *dictDb) GetNotesByUser(userId string) ([]*internal.Note, error) {
 
 func (db *dictDb) GetToken(id string) (*internal.Token, error) {
 	if !db.initialized {
-		return nil, internal.Error{"Database not initialized!"}
+		return nil, internal.Error{"Datasource not initialized!"}
 	}
 
 	return db.tokens[id], nil
@@ -95,7 +95,7 @@ func (db *dictDb) GetToken(id string) (*internal.Token, error) {
 
 func (db *dictDb) GetUser(id string) (*internal.User, error) {
 	if !db.initialized {
-		return nil, internal.Error{"Database not initialized!"}
+		return nil, internal.Error{"Datasource not initialized!"}
 	}
 
 	return db.users[id], nil
@@ -139,29 +139,38 @@ func (db *dictDb) initialize() error {
 	return nil
 }
 
-func (db *dictDb) StoreCode(code *internal.Code) error {
+func (db *dictDb) UpdateCode(code *internal.Code) error {
 	if !db.initialized {
-		return internal.Error{"Database not initialized!"}
+		return internal.Error{"Datasource not initialized!"}
 	}
 
 	db.codes[code.UserId] = code
 	return nil
 }
 
-func (db *dictDb) StoreNote(note *internal.Note) error {
+func (db *dictDb) UpdateNote(note *internal.Note) error {
 	if !db.initialized {
-		return internal.Error{"Database not initialized!"}
+		return internal.Error{"Datasource not initialized!"}
 	}
 
 	db.notes[note.Id] = note
 	return nil
 }
 
-func (db *dictDb) StoreToken(token *internal.Token) error {
+func (db *dictDb) UpdateToken(token *internal.Token) error {
 	if !db.initialized {
-		return internal.Error{"Database not initialized!"}
+		return internal.Error{"Datasource not initialized!"}
 	}
 
 	db.tokens[token.Id] = token
+	return nil
+}
+
+func (db *dictDb) UpdateUser(user *internal.User) error {
+	if !db.initialized {
+		return internal.Error{"Datasource not initialized!"}
+	}
+
+	db.users[user.Id] = user
 	return nil
 }

@@ -9,8 +9,8 @@ func CreateSecureString() string {
 	return rand.Text()
 }
 
-func CompareHashAndString(hash string, str string) error {
-	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(str))
+func CompareHashAndString(hash string, str string) bool {
+	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(str)) == nil
 }
 
 func HashString(str string) (string, error) {

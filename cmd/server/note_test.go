@@ -10,12 +10,8 @@ import (
 	"testing"
 )
 
-func createNote(n *internal.Note, m model.Model) {
-	err := m.CreateNote(n)
-
-	if err != nil {
-		log.Fatal(err)
-	}
+func buildNoteUrl(id string, baseUrl string) string {
+	return fmt.Sprintf("%s/note/%s", baseUrl, id)
 }
 
 func getNote(id string, m model.Model) *internal.Note {
@@ -28,14 +24,10 @@ func getNote(id string, m model.Model) *internal.Note {
 	return note
 }
 
-func getNoteUrl(id string, baseUrl string) string {
-	return fmt.Sprintf("%s/note/%s", baseUrl, id)
-}
-
 func TestNoteDeleteNoAuth(t *testing.T) {
 	ts, _ := test.Server()
 	defer ts.Close()
-	url := getNoteUrl("dogs", ts.URL)
+	url := buildNoteUrl("dogs", ts.URL)
 	test.UnauthorizedTest("DELETE", url, nil)
 }
 
@@ -68,7 +60,7 @@ func TestNoteDelete(t *testing.T) {
 func TestNoteGetNoAuth(t *testing.T) {
 	ts, _ := test.Server()
 	defer ts.Close()
-	url := getNoteUrl("dogs", ts.URL)
+	url := buildNoteUrl("dogs", ts.URL)
 	test.UnauthorizedTest("GET", url, nil)
 }
 
@@ -128,6 +120,6 @@ func TestNotePutUpdate(t *testing.T) {
 func TestNotePutNoAuth(t *testing.T) {
 	ts, _ := test.Server()
 	defer ts.Close()
-	url := getNoteUrl("dogs", ts.URL)
+	url := buildNoteUrl("dogs", ts.URL)
 	test.UnauthorizedTest(http.MethodPut, url, nil)
 }

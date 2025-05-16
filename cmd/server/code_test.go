@@ -11,6 +11,10 @@ import (
 	"time"
 )
 
+func buildCodeUrl(id string, baseUrl string) string {
+	return fmt.Sprintf("%s/user/%s/code", baseUrl, id)
+}
+
 func createCode(userId string, model model.Model) string {
 	code, err := model.CreateOrUpdateCode(userId)
 
@@ -31,14 +35,10 @@ func getCode(id string, m model.Model) *internal.Code {
 	return code
 }
 
-func getCodeUrl(id string, baseUrl string) string {
-	return fmt.Sprintf("%s/user/%s/code", baseUrl, id)
-}
-
 func TestCodePutNoAuth(t *testing.T) {
 	ts, _ := test.Server()
 	defer ts.Close()
-	url := getCodeUrl("tom", ts.URL)
+	url := buildCodeUrl("tom", ts.URL)
 	test.UnauthorizedTest(http.MethodPut, url, nil)
 }
 
@@ -47,32 +47,13 @@ func TestPutCodeDifferentPrincipal(t *testing.T) {
 	defer ts.Close()
 	principalId := "tom"
 	objId := "mot"
-	url := getCodeUrl(objId, ts.URL)
+	url := buildCodeUrl(objId, ts.URL)
 	token := test.SetupAuth(principalId, m)
 
 	req := test.NewReq(http.MethodPut, url, nil)
 	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)
 	test.ExpectStatusCode(resp, http.StatusUnauthorized)
-}
-
-func TestCodePutNew(t *testing.T) {
-	ts, m := test.Server()
-	defer ts.Close()
-	userId := "tom"
-	token := test.SetupAuth(userId, m)
-
-	prePutCode := getCode(userId, m)
-	test.ExpectEqual(prePutCode, nil)
-
-	url := getCodeUrl(userId, ts.URL)
-	req := test.NewReq(http.MethodPut, url, nil)
-	req.SetBasicAuth(token.Id, token.Token)
-	resp := test.SendReq(req)
-	test.ExpectStatusCode(resp, http.StatusOK)
-
-	postPutCode := getCode(userId, m)
-	test.ExpectNotEqual(postPutCode, nil)
 }
 
 func TestCodePutUpdate(t *testing.T) {
@@ -88,7 +69,7 @@ func TestCodePutUpdate(t *testing.T) {
 	// Sometimes the test runs so fast that the times are the same...
 	time.Sleep(2 * time.Nanosecond)
 
-	url := getCodeUrl(userId, ts.URL)
+	url := buildCodeUrl(userId, ts.URL)
 	req := test.NewReq(http.MethodPut, url, nil)
 	req.SetBasicAuth(token.Id, token.Token)
 	resp := test.SendReq(req)

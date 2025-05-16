@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"notemeal-server/internal"
-	"notemeal-server/internal/database"
+	"notemeal-server/internal/data"
 	"notemeal-server/internal/handler"
 	"notemeal-server/internal/model"
 )
@@ -115,8 +115,8 @@ func Serialize(v any) []byte {
 }
 
 func Server() (*httptest.Server, model.Model) {
-	db := database.DictDb()
-	m := model.NewModel(db)
+	ds := data.Sqlite()
+	m := model.NewModel(ds)
 
 	mux := handler.ServeMux(m)
 	ts := httptest.NewServer(mux)

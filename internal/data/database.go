@@ -1,10 +1,10 @@
-package database
+package data
 
 import (
 	"notemeal-server/internal"
 )
 
-type Database interface {
+type Datasource interface {
 	DeleteCode(userId string) error
 	DeleteNote(id string) error
 	DeleteUser(id string) error
@@ -13,8 +13,8 @@ type Database interface {
 	GetNotesByUser(userId string) ([]*internal.Note, error)
 	GetToken(id string) (*internal.Token, error)
 	GetUser(id string) (*internal.User, error)
-	initialize() error
-	StoreCode(code *internal.Code) error
-	StoreNote(note *internal.Note) error
-	StoreToken(token *internal.Token) error
+	UpdateCode(code *internal.Code) error
+	UpdateNote(note *internal.Note) error
+	UpdateToken(token *internal.Token) error
+	UpdateUser(user *internal.User) error
 }

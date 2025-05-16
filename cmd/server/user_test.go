@@ -10,6 +10,10 @@ import (
 	"testing"
 )
 
+func buildUserUrl(id string, baseUrl string) string {
+	return fmt.Sprintf("%s/user/%s", baseUrl, id)
+}
+
 func getUser(id string, m model.Model) *internal.User {
 	user, err := m.GetUser(id)
 
@@ -18,10 +22,6 @@ func getUser(id string, m model.Model) *internal.User {
 	}
 
 	return user
-}
-
-func buildUserUrl(id string, baseUrl string) string {
-	return fmt.Sprintf("%s/user/%s", baseUrl, id)
 }
 
 func TestUserDeleteNoAuth(t *testing.T) {

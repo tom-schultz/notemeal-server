@@ -4,16 +4,16 @@ import (
 	"crypto/rand"
 	"log/slog"
 	"notemeal-server/internal"
-	"notemeal-server/internal/database"
+	"notemeal-server/internal/data"
 	"time"
 )
 
 type Model struct {
-	db database.Database
+	ds data.Datasource
 }
 
-func NewModel(db database.Database) Model {
-	return Model{db: db}
+func NewModel(ds data.Datasource) Model {
+	return Model{ds: ds}
 }
 
 func (m *Model) CreateOrUpdateCode(userId string) (string, error) {
@@ -31,7 +31,7 @@ func (m *Model) CreateOrUpdateCode(userId string) (string, error) {
 		Expiration: expiration,
 	}
 
-	err = m.db.StoreCode(code)
+	err = m.ds.UpdateCode(code)
 
 	if err != nil {
 		return "", err
@@ -41,7 +41,7 @@ func (m *Model) CreateOrUpdateCode(userId string) (string, error) {
 }
 
 func (m *Model) CreateNote(newNote *internal.Note) error {
-	note, err := m.db.GetNote(newNote.Id)
+	note, err := m.ds.GetNote(newNote.Id)
 
 	if err != nil {
 		return err
@@ -51,7 +51,7 @@ func (m *Model) CreateNote(newNote *internal.Note) error {
 		return internal.Error{"Note already exists!"}
 	}
 
-	err = m.db.StoreNote(newNote)
+	err = m.ds.UpdateNote(newNote)
 
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func (m *Model) CreateNote(newNote *internal.Note) error {
 }
 
 func (m *Model) CreateToken(userId string, codeString string) (*internal.ClientToken, error) {
-	code, err := m.db.GetCode(userId)
+	code, err := m.ds.GetCode(userId)
 
 	if err != nil {
 		return nil, err
@@ -71,9 +71,7 @@ func (m *Model) CreateToken(userId string, codeString string) (*internal.ClientT
 		return nil, nil
 	}
 
-	err = internal.CompareHashAndString(code.Hash, codeString)
-
-	if err != nil {
+	if !internal.CompareHashAndString(code.Hash, codeString) {
 		return nil, nil
 	}
 
@@ -90,11 +88,11 @@ func (m *Model) CreateToken(userId string, codeString string) (*internal.ClientT
 	}
 	id := rand.Text()
 
-	tokenId, err := m.db.GetToken(id)
+	tokenId, err := m.ds.GetToken(id)
 
 	for tokenId != nil {
 		id = rand.Text()
-		tokenId, err = m.db.GetToken(id)
+		tokenId, err = m.ds.GetToken(id)
 	}
 
 	if err != nil {
@@ -110,13 +108,13 @@ func (m *Model) CreateToken(userId string, codeString string) (*internal.ClientT
 		Id:    id,
 		Token: tokenStr}
 
-	err = m.db.StoreToken(token)
+	err = m.ds.UpdateToken(token)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = m.db.DeleteCode(userId)
+	err = m.ds.DeleteCode(userId)
 
 	if err != nil {
 		return nil, err
@@ -126,7 +124,7 @@ func (m *Model) CreateToken(userId string, codeString string) (*internal.ClientT
 }
 
 func (m *Model) DeleteUser(id string) error {
-	err := m.db.DeleteUser(id)
+	err := m.ds.DeleteUser(id)
 
 	if err != nil {
 		return err
@@ -136,7 +134,7 @@ func (m *Model) DeleteUser(id string) error {
 }
 
 func (m *Model) DeleteNote(id string) error {
-	err := m.db.DeleteNote(id)
+	err := m.ds.DeleteNote(id)
 
 	if err != nil {
 		return err
@@ -146,7 +144,7 @@ func (m *Model) DeleteNote(id string) error {
 }
 
 func (m *Model) GetCode(userId string) (*internal.Code, error) {
-	code, err := m.db.GetCode(userId)
+	code, err := m.ds.GetCode(userId)
 
 	if err != nil {
 		return nil, err
@@ -156,7 +154,7 @@ func (m *Model) GetCode(userId string) (*internal.Code, error) {
 }
 
 func (m *Model) GetNote(id string) (*internal.Note, error) {
-	note, err := m.db.GetNote(id)
+	note, err := m.ds.GetNote(id)
 
 	if err != nil {
 		return nil, err
@@ -166,7 +164,7 @@ func (m *Model) GetNote(id string) (*internal.Note, error) {
 }
 
 func (m *Model) GetToken(tokenId string) (*internal.Token, error) {
-	token, err := m.db.GetToken(tokenId)
+	token, err := m.ds.GetToken(tokenId)
 
 	if err != nil {
 		return nil, err
@@ -176,7 +174,7 @@ func (m *Model) GetToken(tokenId string) (*internal.Token, error) {
 }
 
 func (m *Model) GetUser(id string) (*internal.User, error) {
-	user, err := m.db.GetUser(id)
+	user, err := m.ds.GetUser(id)
 
 	if err != nil {
 		return nil, err
@@ -186,7 +184,7 @@ func (m *Model) GetUser(id string) (*internal.User, error) {
 }
 
 func (m *Model) IsAdmin(userId string) (bool, error) {
-	user, err := m.db.GetUser(userId)
+	user, err := m.ds.GetUser(userId)
 
 	if err != nil {
 		return false, err
@@ -196,7 +194,7 @@ func (m *Model) IsAdmin(userId string) (bool, error) {
 }
 
 func (m *Model) IsNoteOwner(noteId string, principalId string) (bool, error) {
-	note, err := m.db.GetNote(noteId)
+	note, err := m.ds.GetNote(noteId)
 
 	if err != nil {
 		return false, err
@@ -211,7 +209,7 @@ func (m *Model) IsNoteOwner(noteId string, principalId string) (bool, error) {
 
 func (m *Model) ListLastModified(userId string) (map[string]int, error) {
 	data := make(map[string]int)
-	notes, err := m.db.GetNotesByUser(userId)
+	notes, err := m.ds.GetNotesByUser(userId)
 
 	if err != nil {
 		return nil, err
@@ -227,7 +225,7 @@ func (m *Model) ListLastModified(userId string) (map[string]int, error) {
 }
 
 func (m *Model) UpdateNote(newNote *internal.Note) error {
-	oldNote, err := m.db.GetNote(newNote.Id)
+	oldNote, err := m.ds.GetNote(newNote.Id)
 
 	if err != nil {
 		return err
@@ -240,11 +238,12 @@ func (m *Model) UpdateNote(newNote *internal.Note) error {
 	oldNote.LastModified = newNote.LastModified
 	oldNote.Text = newNote.Text
 	oldNote.Title = newNote.Title
-	return nil
+
+	return m.ds.UpdateNote(oldNote)
 }
 
 func (m *Model) SetUser(u *internal.User) error {
-	user, err := m.db.GetUser(u.Id)
+	user, err := m.ds.GetUser(u.Id)
 
 	if err != nil {
 		return err
@@ -255,5 +254,5 @@ func (m *Model) SetUser(u *internal.User) error {
 	}
 
 	user.Email = u.Email
-	return nil
+	return m.ds.UpdateUser(user)
 }
