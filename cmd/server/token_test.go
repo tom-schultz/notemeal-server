@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"notemeal-server/internal"
 	"notemeal-server/internal/model"
-	"notemeal-server/internal/test"
 	"testing"
 )
 
@@ -25,65 +24,65 @@ func getToken(id string, m model.Model) *internal.Token {
 }
 
 func TestTokenPost(t *testing.T) {
-	ts, m := test.Server()
+	ts, m := Server()
 	defer ts.Close()
 	userId := "tom"
 	url := buildTokenUrl(userId, ts.URL)
 	code := createCode(userId, m)
 	clientCode := internal.ClientCode{UserId: userId, Code: code}
-	reqBody := test.Serialize(clientCode)
+	reqBody := Serialize(clientCode)
 
-	req := test.NewReq(http.MethodPost, url, reqBody)
-	resp := test.SendReq(req)
-	test.ExpectStatusCode(resp, http.StatusOK)
+	req := NewReq(http.MethodPost, url, reqBody)
+	resp := SendReq(req)
+	ExpectStatusCode(resp, http.StatusOK)
 
 	var clientToken internal.ClientToken
-	test.GetBodyData(resp, &clientToken)
+	GetBodyData(resp, &clientToken)
 	dbToken := getToken(clientToken.Id, m)
-	test.ExpectNotEqual(dbToken, nil)
+	ExpectNotEqual(dbToken, nil)
 	valid := internal.CompareHashAndString(dbToken.Hash, clientToken.Token)
-	test.ExpectEqual(valid, true)
+	ExpectEqual(valid, true)
 }
 
 func TestTokenPostFakeCode(t *testing.T) {
-	ts, _ := test.Server()
+	ts, _ := Server()
 	defer ts.Close()
 	userId := "tom"
 	url := buildTokenUrl(userId, ts.URL)
 	code := "mumbojumbo"
 	clientCode := internal.ClientCode{UserId: userId, Code: code}
-	reqBody := test.Serialize(clientCode)
+	reqBody := Serialize(clientCode)
 
-	req := test.NewReq(http.MethodPost, url, reqBody)
-	resp := test.SendReq(req)
-	test.ExpectStatusCode(resp, http.StatusUnauthorized)
+	req := NewReq(http.MethodPost, url, reqBody)
+	resp := SendReq(req)
+	ExpectStatusCode(resp, http.StatusUnauthorized)
 }
 
 func TestTokenPostWrongCode(t *testing.T) {
-	ts, m := test.Server()
+	ts, m := Server()
 	defer ts.Close()
 	userId := "tom"
 	url := buildTokenUrl(userId, ts.URL)
 	createCode(userId, m)
 	wrongCode := "mumbojumbo"
 	clientCode := internal.ClientCode{UserId: userId, Code: wrongCode}
-	reqBody := test.Serialize(clientCode)
+	reqBody := Serialize(clientCode)
 
-	req := test.NewReq(http.MethodPost, url, reqBody)
-	resp := test.SendReq(req)
-	test.ExpectStatusCode(resp, http.StatusUnauthorized)
+	req := NewReq(http.MethodPost, url, reqBody)
+	resp := SendReq(req)
+	ExpectStatusCode(resp, http.StatusUnauthorized)
 }
 
 func TestTokenPostExpiredCode(t *testing.T) {
-	ts, _ := test.Server()
+	ts, _ := Server()
 	defer ts.Close()
 	userId := "expired-code"
 	url := buildTokenUrl(userId, ts.URL)
 	code := "expired"
 	clientCode := internal.ClientCode{UserId: userId, Code: code}
-	reqBody := test.Serialize(clientCode)
+	reqBody := Serialize(clientCode)
 
-	req := test.NewReq(http.MethodPost, url, reqBody)
-	resp := test.SendReq(req)
-	test.ExpectStatusCode(resp, http.StatusUnauthorized)
+	req := NewReq(http.MethodPost, url, reqBody)
+	resp := SendReq(req)
+	ExpectStatusCode(resp, http.StatusUnauthorized)
 }

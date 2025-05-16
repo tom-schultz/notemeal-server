@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"notemeal-server/internal"
 	"notemeal-server/internal/model"
-	"notemeal-server/internal/test"
 	"testing"
 )
 
@@ -25,33 +24,33 @@ func getUser(id string, m model.Model) *internal.User {
 }
 
 func TestUserDeleteNoAuth(t *testing.T) {
-	ts, _ := test.Server()
+	ts, _ := Server()
 	defer ts.Close()
 	url := buildUserUrl("tom", ts.URL)
-	test.UnauthorizedTest("DELETE", url, nil)
+	UnauthorizedTest("DELETE", url, nil)
 }
 
 func TestUserDeleteDifferentPrincipal(t *testing.T) {
-	ts, m := test.Server()
+	ts, m := Server()
 	defer ts.Close()
 	userId := "tom"
 	deleteUserId := "mot"
 	url := buildUserUrl(deleteUserId, ts.URL)
-	token := test.SetupAuth(userId, m)
+	token := SetupAuth(userId, m)
 
-	req := test.NewReq(http.MethodDelete, url, nil)
+	req := NewReq(http.MethodDelete, url, nil)
 	req.SetBasicAuth(token.Id, token.Token)
-	resp := test.SendReq(req)
-	test.ExpectStatusCode(resp, http.StatusUnauthorized)
+	resp := SendReq(req)
+	ExpectStatusCode(resp, http.StatusUnauthorized)
 }
 
 func TestUserDelete(t *testing.T) {
-	ts, m := test.Server()
+	ts, m := Server()
 	defer ts.Close()
 	principalId := "tom"
 	objId := "tom"
 	url := buildUserUrl(objId, ts.URL)
-	token := test.SetupAuth(principalId, m)
+	token := SetupAuth(principalId, m)
 
 	deletedUser := getUser(objId, m)
 
@@ -59,101 +58,101 @@ func TestUserDelete(t *testing.T) {
 		log.Fatal("User to delete does not exist!")
 	}
 
-	req := test.NewReq(http.MethodDelete, url, nil)
+	req := NewReq(http.MethodDelete, url, nil)
 	req.SetBasicAuth(token.Id, token.Token)
-	test.SendReq(req)
+	SendReq(req)
 	deletedUser = getUser(objId, m)
-	test.ExpectEqual(deletedUser, nil)
+	ExpectEqual(deletedUser, nil)
 }
 
 func TestUserGetNoAuth(t *testing.T) {
-	ts, _ := test.Server()
+	ts, _ := Server()
 	defer ts.Close()
 	url := buildUserUrl("tom", ts.URL)
-	test.UnauthorizedTest("GET", url, nil)
+	UnauthorizedTest("GET", url, nil)
 }
 
 func TestUserGetDifferentPrincipal(t *testing.T) {
-	ts, m := test.Server()
+	ts, m := Server()
 	defer ts.Close()
 	principalId := "tom"
 	objId := "mot"
 	url := buildUserUrl(objId, ts.URL)
-	token := test.SetupAuth(principalId, m)
+	token := SetupAuth(principalId, m)
 
-	req := test.NewReq(http.MethodGet, url, nil)
+	req := NewReq(http.MethodGet, url, nil)
 	req.SetBasicAuth(token.Id, token.Token)
-	resp := test.SendReq(req)
-	test.ExpectStatusCode(resp, http.StatusUnauthorized)
+	resp := SendReq(req)
+	ExpectStatusCode(resp, http.StatusUnauthorized)
 }
 
 func TestUserGet(t *testing.T) {
-	ts, m := test.Server()
+	ts, m := Server()
 	defer ts.Close()
 	userId := "tom"
 	url := buildUserUrl(userId, ts.URL)
-	token := test.SetupAuth(userId, m)
+	token := SetupAuth(userId, m)
 
-	req := test.NewReq(http.MethodGet, url, nil)
+	req := NewReq(http.MethodGet, url, nil)
 	req.SetBasicAuth(token.Id, token.Token)
-	resp := test.SendReq(req)
-	test.ExpectStatusCode(resp, http.StatusOK)
+	resp := SendReq(req)
+	ExpectStatusCode(resp, http.StatusOK)
 
 	user := getUser(userId, m)
-	test.ExpectBody(resp, test.Serialize(user))
+	ExpectBody(resp, Serialize(user))
 }
 
 func TestUserPutNoAuth(t *testing.T) {
-	ts, _ := test.Server()
+	ts, _ := Server()
 	defer ts.Close()
 	url := buildUserUrl("tom", ts.URL)
-	test.UnauthorizedTest("PUT", url, nil)
+	UnauthorizedTest("PUT", url, nil)
 }
 
 func TestUserPutDifferentPrincipal(t *testing.T) {
-	ts, m := test.Server()
+	ts, m := Server()
 	defer ts.Close()
 	principalId := "tom"
 	objId := "mot"
 	url := buildUserUrl(objId, ts.URL)
-	token := test.SetupAuth(principalId, m)
+	token := SetupAuth(principalId, m)
 
-	req := test.NewReq(http.MethodPut, url, nil)
+	req := NewReq(http.MethodPut, url, nil)
 	req.SetBasicAuth(token.Id, token.Token)
-	resp := test.SendReq(req)
-	test.ExpectStatusCode(resp, http.StatusUnauthorized)
+	resp := SendReq(req)
+	ExpectStatusCode(resp, http.StatusUnauthorized)
 }
 
 func TestUserPut(t *testing.T) {
-	ts, m := test.Server()
+	ts, m := Server()
 	defer ts.Close()
 	userId := "tom"
 	url := buildUserUrl(userId, ts.URL)
-	token := test.SetupAuth(userId, m)
+	token := SetupAuth(userId, m)
 
 	putUser := &internal.User{Id: userId, Email: "new@email.com"}
-	req := test.NewReq(http.MethodPut, url, test.Serialize(putUser))
+	req := NewReq(http.MethodPut, url, Serialize(putUser))
 	req.SetBasicAuth(token.Id, token.Token)
-	resp := test.SendReq(req)
-	test.ExpectStatusCode(resp, http.StatusOK)
+	resp := SendReq(req)
+	ExpectStatusCode(resp, http.StatusOK)
 
 	dbUser := getUser(userId, m)
-	test.ExpectEqual(*putUser, *dbUser)
+	ExpectEqual(*putUser, *dbUser)
 }
 
 func TestUserPutIdChanged(t *testing.T) {
-	ts, m := test.Server()
+	ts, m := Server()
 	defer ts.Close()
 	userId := "tom"
 	url := buildUserUrl(userId, ts.URL)
-	token := test.SetupAuth(userId, m)
+	token := SetupAuth(userId, m)
 
 	putUser := &internal.User{Id: "malicious", Email: "new@email.com"}
-	req := test.NewReq(http.MethodPut, url, test.Serialize(putUser))
+	req := NewReq(http.MethodPut, url, Serialize(putUser))
 	req.SetBasicAuth(token.Id, token.Token)
-	resp := test.SendReq(req)
-	test.ExpectStatusCode(resp, http.StatusOK)
+	resp := SendReq(req)
+	ExpectStatusCode(resp, http.StatusOK)
 
 	dbUser := getUser(userId, m)
-	test.ExpectEqual(userId, dbUser.Id)
+	ExpectEqual(userId, dbUser.Id)
 }

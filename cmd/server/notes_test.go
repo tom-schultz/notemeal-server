@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 	"notemeal-server/internal/model"
-	"notemeal-server/internal/test"
 	"testing"
 )
 
@@ -15,26 +14,26 @@ func listNotes(user string, m model.Model) []byte {
 		log.Fatal(err)
 	}
 
-	return test.Serialize(notes)
+	return Serialize(notes)
 }
 
 func TestNotesGetNoAuth(t *testing.T) {
-	ts, _ := test.Server()
+	ts, _ := Server()
 	defer ts.Close()
-	test.UnauthorizedTest("GET", ts.URL+"/notes", nil)
+	UnauthorizedTest("GET", ts.URL+"/notes", nil)
 }
 
 func TestNotesGet(t *testing.T) {
-	ts, m := test.Server()
+	ts, m := Server()
 	defer ts.Close()
 	user := "tom"
-	token := test.SetupAuth(user, m)
+	token := SetupAuth(user, m)
 
-	req := test.NewReq("GET", ts.URL+"/notes", nil)
+	req := NewReq("GET", ts.URL+"/notes", nil)
 	req.SetBasicAuth(token.Id, token.Token)
-	resp := test.SendReq(req)
-	test.ExpectStatusCode(resp, http.StatusOK)
+	resp := SendReq(req)
+	ExpectStatusCode(resp, http.StatusOK)
 
 	notes := listNotes(user, m)
-	test.ExpectBody(resp, notes)
+	ExpectBody(resp, notes)
 }

@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	ds := data.DictDb()
+	ds := data.Sqlite()
 	m := notemealModel.NewModel(ds)
 	mux := handler.ServeMux(m)
 	log.Fatal(http.ListenAndServe(":8080", mux))
