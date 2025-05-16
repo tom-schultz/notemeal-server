@@ -115,7 +115,7 @@ func Serialize(v any) []byte {
 }
 
 func Server() (*httptest.Server, model.Model) {
-	ds := data.Sqlite()
+	ds := data.Sqlite(true)
 	m := model.NewModel(ds)
 
 	mux := handler.ServeMux(m)

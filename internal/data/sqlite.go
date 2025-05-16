@@ -2,6 +2,7 @@ package data
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"log"
@@ -15,10 +16,10 @@ type sqlite struct {
 	initialized bool
 }
 
-func Sqlite() Datasource {
+func Sqlite(testing bool) Datasource {
 	ds := &sqlite{}
 
-	if err := ds.initialize(); err != nil {
+	if err := ds.initialize(testing); err != nil {
 		log.Fatal(err)
 	}
 
@@ -156,14 +157,27 @@ func (ds *sqlite) GetNotesByUser(userId string) ([]*internal.Note, error) {
 	return data, nil
 }
 
+func (ds *sqlite) userHasToken(userId string) (bool, error) {
+	stmt, err := ds.db.Prepare(`select id, hash, userId from token where userId=?`)
+
+	if err != nil {
+		return false, err
+	}
+
+	defer stmt.Close()
+	row, err := stmt.Query(userId)
+
+	if err != nil {
+		return false, err
+	}
+
+	return row.Next(), nil
+}
+
 func (ds *sqlite) GetToken(id string) (*internal.Token, error) {
 	if !ds.initialized {
 		return nil, internal.Error{"Datasource not initialized!"}
 	}
-	if !ds.initialized {
-		return nil, internal.Error{"Datasource not initialized!"}
-	}
-
 	stmt, err := ds.db.Prepare(`select id, hash, userId from token where id=?`)
 
 	if err != nil {
@@ -208,14 +222,19 @@ func (ds *sqlite) GetUser(id string) (*internal.User, error) {
 	}
 }
 
-func (ds *sqlite) initialize() error {
-	err := os.Remove("./notemeal.db")
+func (ds *sqlite) initialize(testing bool) error {
+	dbPath := "./notemeal.db"
 
-	if err != nil {
-		log.Fatal(err)
+	if testing {
+		dbPath = "./notemeal-test.db"
+		err := os.Remove(dbPath)
+
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			log.Fatal(err)
+		}
 	}
 
-	db, err := sql.Open("sqlite3", "./notemeal.db")
+	db, err := sql.Open("sqlite3", dbPath)
 
 	if err != nil {
 		return err
@@ -223,25 +242,25 @@ func (ds *sqlite) initialize() error {
 
 	ds.db = db
 
-	err = ds.initializeCodes()
+	err = ds.initializeTokens(testing)
 
 	if err != nil {
 		return err
 	}
 
-	err = ds.initializeTokens()
+	err = ds.initializeCodes(testing)
 
 	if err != nil {
 		return err
 	}
 
-	err = ds.initializeNotes()
+	err = ds.initializeNotes(testing)
 
 	if err != nil {
 		return err
 	}
 
-	err = ds.initializeUsers()
+	err = ds.initializeUsers(testing)
 
 	if err != nil {
 		return err
@@ -251,7 +270,7 @@ func (ds *sqlite) initialize() error {
 	return nil
 }
 
-func (ds *sqlite) initializeCodes() error {
+func (ds *sqlite) initializeCodes(testing bool) error {
 	sqlStmt := `
 	create table if not exists code (id text not null primary key, hash text, expiration datetime);
 	`
@@ -263,21 +282,47 @@ func (ds *sqlite) initializeCodes() error {
 		return err
 	}
 
-	expiredHash, err := internal.HashString("expired")
+	codes := map[string]*internal.Code{}
 
-	if err != nil {
-		return nil
-	}
+	if !testing {
+		adminTokenExists, err := ds.userHasToken("admin")
 
-	codeHash, err := internal.HashString("turtles")
+		if err != nil {
+			return err
+		}
 
-	if err != nil {
-		return nil
-	}
+		if adminTokenExists {
+			return nil
+		}
 
-	codes := map[string]*internal.Code{
-		"expired-code": {"expired-code", expiredHash, time.Unix(0, 0)},
-		"tom":          {"tom", codeHash, time.Now().Add(time.Hour)},
+		adminCode := internal.CreateSecureString()
+		adminHash, err := internal.HashString(adminCode)
+		fmt.Printf("Admin code: %s\n", adminCode)
+
+		if err != nil {
+			return err
+		}
+
+		codes = map[string]*internal.Code{
+			"admin": {"admin", adminHash, time.Now().Add(24 * time.Hour)},
+		}
+	} else {
+		expiredHash, err := internal.HashString("expired")
+
+		if err != nil {
+			return nil
+		}
+
+		turtleHash, err := internal.HashString("turtles")
+
+		if err != nil {
+			return nil
+		}
+
+		codes = map[string]*internal.Code{
+			"expired-code": {"expired-code", expiredHash, time.Unix(0, 0)},
+			"tom":          {"tom", turtleHash, time.Now().Add(time.Hour)},
+		}
 	}
 
 	tx, err := ds.db.Begin()
@@ -306,7 +351,7 @@ func (ds *sqlite) initializeCodes() error {
 	return err
 }
 
-func (ds *sqlite) initializeNotes() error {
+func (ds *sqlite) initializeNotes(testing bool) error {
 	sqlStmt := `
 	create table if not exists note (id text not null primary key, lastModified integer not null, text text not null, title text not null, userId text not null);
 	`
@@ -316,6 +361,10 @@ func (ds *sqlite) initializeNotes() error {
 	if err != nil {
 		log.Printf("%q: %s\n", err, sqlStmt)
 		return err
+	}
+
+	if !testing {
+		return nil
 	}
 
 	tx, err := ds.db.Begin()
@@ -351,7 +400,7 @@ func (ds *sqlite) initializeNotes() error {
 	return err
 }
 
-func (ds *sqlite) initializeUsers() error {
+func (ds *sqlite) initializeUsers(testing bool) error {
 	sqlStmt := `
 	create table if not exists user (id text not null primary key, email text not null, isAdmin integer not null);
 	`
@@ -361,6 +410,10 @@ func (ds *sqlite) initializeUsers() error {
 	if err != nil {
 		log.Printf("%q: %s\n", err, sqlStmt)
 		return err
+	}
+
+	if !testing {
+		return nil
 	}
 
 	tx, err := ds.db.Begin()
@@ -396,7 +449,7 @@ func (ds *sqlite) initializeUsers() error {
 	return err
 }
 
-func (ds *sqlite) initializeTokens() error {
+func (ds *sqlite) initializeTokens(testing bool) error {
 	sqlStmt := `
 	create table if not exists token (id text not null primary key, hash text not null, userId text not null);
 	`
@@ -405,6 +458,10 @@ func (ds *sqlite) initializeTokens() error {
 
 	if err != nil {
 		log.Printf("%q: %s\n", err, sqlStmt)
+	}
+
+	if !testing {
+		return nil
 	}
 
 	return err
@@ -438,8 +495,7 @@ func (ds *sqlite) UpdateNote(note *internal.Note) error {
 	}
 
 	defer stmt.Close()
-	result, err := stmt.Exec(note.Id, note.LastModified, note.Text, note.Title, note.UserId)
-	fmt.Println(result)
+	_, err = stmt.Exec(note.Id, note.LastModified, note.Text, note.Title, note.UserId)
 	return err
 }
 
@@ -471,7 +527,6 @@ func (ds *sqlite) UpdateUser(user *internal.User) error {
 	}
 
 	defer stmt.Close()
-	result, err := stmt.Exec(user.Id, user.Email, user.IsAdmin)
-	fmt.Println(result)
+	_, err = stmt.Exec(user.Id, user.Email, user.IsAdmin)
 	return err
 }
