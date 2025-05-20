@@ -17,6 +17,7 @@ func ServeMux(m notemealModel.Model) *http.ServeMux {
 	mux.Handle("PUT /user/{id}", Handler{m, PutUser})
 	mux.Handle("PUT /user/{id}/code", Handler{m, PutCode})
 	mux.Handle("POST /user/{id}/token", Handler{m, PostToken})
+	mux.Handle("GET /health", Handler{m, GetHealth})
 
 	return mux
 }
