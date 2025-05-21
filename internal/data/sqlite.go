@@ -3,9 +3,9 @@ package data
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"log"
+	"log/slog"
 	"notemeal-server/internal"
 	"os"
 	"time"
@@ -295,11 +295,25 @@ func (ds *sqlite) initializeCodes(testing bool) error {
 			return nil
 		}
 
-		adminCode := internal.CreateSecureString()
+		adminCode := internal.CreateSecureString()[0:6]
 		adminHash, err := internal.HashString(adminCode)
-		fmt.Printf("Admin code: %s\n", adminCode)
 
 		if err != nil {
+			slog.Info("Couldn't hash initial admin code!")
+			return err
+		}
+
+		f, err := os.Open("initial-admin-code")
+
+		if err != nil {
+			slog.Info("Couldn't open initial admin code file!")
+			return err
+		}
+
+		_, err = f.Write([]byte(adminCode))
+
+		if err != nil {
+			slog.Info("Couldn't write initial admin code!")
 			return err
 		}
 
