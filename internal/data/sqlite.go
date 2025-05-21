@@ -303,10 +303,10 @@ func (ds *sqlite) initializeCodes(testing bool) error {
 			return err
 		}
 
-		f, err := os.Open("initial-admin-code")
+		f, err := os.Create("./initial-admin-code")
 
 		if err != nil {
-			slog.Info("Couldn't open initial admin code file!")
+			slog.Info("Couldn't create initial admin code file!")
 			return err
 		}
 
